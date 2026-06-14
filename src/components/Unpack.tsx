@@ -14,7 +14,10 @@ export default function Unpack() {
 
   return (
     <section className="mx-auto max-w-xl p-4">
-      <h2 className="mb-3 text-xl font-semibold">Unpack</h2>
+      <h2 className="mb-1 text-xl font-semibold">Unpack</h2>
+      <p className="mb-3 text-sm text-muted">
+        Enter a box number to see its room, contents, and photos before opening it.
+      </p>
 
       <input
         type="number"
