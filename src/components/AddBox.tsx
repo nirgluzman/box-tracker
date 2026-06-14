@@ -1,12 +1,277 @@
-// SPEC 6.2 — Add Box. Skeleton; full flow built in Phase 6.
-// TODO: pre-generate docId on open, room pills, mic (he-IL) + summarize(),
-// photo upload to boxPhotos/{docId}/, orphaned-photo prompt, urgent toggle,
-// save with max+1 numbering + range-overflow warning, offline mic/photo disable.
+import { useEffect, useRef, useState, type ChangeEvent } from 'react'
+import { auth } from '../firebase'
+import { useRooms } from '../hooks/useRooms'
+import { useBoxes } from '../hooks/useBoxes'
+import { useOnline } from '../hooks/useOnline'
+import { useSpeechRecognition } from '../hooks/useSpeechRecognition'
+import { summarize } from '../llm'
+import { rangeEnd } from '../data/rooms'
+import { createBox, isRangeOverflow, newBoxId, nextBoxNumber } from '../data/boxes'
+import { deletePhotoPaths, uploadBoxPhoto, type UploadedPhoto } from '../data/photos'
+import type { RoomDoc } from '../types'
+
+// SPEC 6.2 — Add Box.
 export default function AddBox() {
+  const { rooms } = useRooms()
+  const { boxes } = useBoxes()
+  const online = useOnline()
+  const speech = useSpeechRecognition('he-IL')
+
+  const [docId, setDocId] = useState(newBoxId)
+  const [room, setRoom] = useState<RoomDoc | null>(null)
+  const [description, setDescription] = useState('')
+  const [urgent, setUrgent] = useState(false)
+  const [photos, setPhotos] = useState<UploadedPhoto[]>([])
+  const [uploading, setUploading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [confirmation, setConfirmation] = useState<string | null>(null)
+  const [summarizing, setSummarizing] = useState(false)
+  const awaitingSummary = useRef(false)
+
+  // Refs for the unmount-time orphaned-photo prompt (SPEC 6.2).
+  const photosRef = useRef<UploadedPhoto[]>([])
+  const savedRef = useRef(false)
+  photosRef.current = photos
+
+  useEffect(() => {
+    return () => {
+      if (!savedRef.current && photosRef.current.length > 0) {
+        const ok = window.confirm(
+          `You added ${photosRef.current.length} photo(s) but didn't save this box. Delete them?`,
+        )
+        if (ok) deletePhotoPaths(photosRef.current.map((p) => p.path))
+      }
+    }
+  }, [])
+
+  // When dictation stops, summarize the transcript into the description.
+  useEffect(() => {
+    if (speech.listening || !awaitingSummary.current) return
+    awaitingSummary.current = false
+    const text = speech.transcript.trim()
+    if (!text) return
+    setSummarizing(true)
+    summarize(text)
+      .then((s) => setDescription(s))
+      .finally(() => setSummarizing(false))
+  }, [speech.listening, speech.transcript])
+
+  function toggleMic() {
+    if (speech.listening) {
+      speech.stop()
+    } else {
+      awaitingSummary.current = true
+      speech.start()
+    }
+  }
+
+  async function handlePhotos(e: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? [])
+    e.target.value = '' // allow re-selecting the same file
+    if (files.length === 0) return
+    setUploading(true)
+    try {
+      for (const file of files) {
+        const uploaded = await uploadBoxPhoto(docId, file)
+        setPhotos((prev) => [...prev, uploaded])
+      }
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  async function removePhoto(photo: UploadedPhoto) {
+    await deletePhotoPaths([photo.path])
+    setPhotos((prev) => prev.filter((p) => p.path !== photo.path))
+  }
+
+  function resetForm() {
+    savedRef.current = false
+    setDocId(newBoxId())
+    setRoom(null)
+    setDescription('')
+    setUrgent(false)
+    setPhotos([])
+    speech.reset()
+  }
+
+  async function handleSave() {
+    if (!room || saving) return
+    setSaving(true)
+    try {
+      const boxNumber = nextBoxNumber(room.name, room.rangeStart, boxes)
+      await createBox(docId, {
+        boxNumber,
+        room: room.name,
+        roomColor: room.color,
+        description: description.trim(),
+        urgent,
+        photoUrls: photos.map((p) => p.url),
+        addedBy: auth.currentUser?.email ?? 'unknown',
+      })
+      savedRef.current = true // photos now belong to a saved box
+
+      let message = `Saved as Box #${boxNumber} (${room.name}) — write this on the box.`
+      if (isRangeOverflow(boxNumber, room.rangeStart)) {
+        message += ` Box #${boxNumber} exceeds the ${room.name} range (${room.rangeStart}–${rangeEnd(
+          room.rangeStart,
+        )}) — consider widening the range in Config.`
+      }
+      setConfirmation(message)
+      resetForm()
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return (
-    <section className="p-4">
-      <h2 className="mb-2 text-xl font-semibold">Add Box</h2>
-      <p className="text-muted">Add Box form — not yet implemented.</p>
+    <section className="mx-auto max-w-xl p-4">
+      <h2 className="mb-3 text-xl font-semibold">Add Box</h2>
+
+      {confirmation && (
+        <div
+          className="mb-4 rounded-lg border border-accent bg-accent/10 px-3 py-2 text-sm"
+          role="status"
+        >
+          {confirmation}
+        </div>
+      )}
+
+      {/* Room picker (SPEC 6.2) */}
+      <fieldset className="mb-4">
+        <legend className="mb-2 text-sm text-muted">Room</legend>
+        {rooms.length === 0 ? (
+          <p className="text-sm text-muted">No rooms yet — add rooms in Config first.</p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {rooms.map((r) => {
+              const selected = room?.id === r.id
+              return (
+                <button
+                  key={r.id}
+                  type="button"
+                  onClick={() => setRoom(r)}
+                  className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                    selected ? 'border-accent bg-accent/15 font-semibold' : 'border-edge'
+                  }`}
+                  aria-pressed={selected}
+                >
+                  <span
+                    className="size-3 rounded-full"
+                    style={{ background: r.color }}
+                    aria-hidden="true"
+                  />
+                  {r.name}
+                </button>
+              )
+            })}
+          </div>
+        )}
+      </fieldset>
+
+      {/* Description + mic (SPEC 6.2 / 7) */}
+      <div className="mb-4">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <label htmlFor="desc" className="text-sm text-muted">
+            Description
+          </label>
+          <button
+            type="button"
+            className="btn"
+            onClick={toggleMic}
+            disabled={!online || !speech.supported}
+            title={
+              !online
+                ? 'Voice input needs a connection'
+                : !speech.supported
+                  ? 'Voice not supported on this browser'
+                  : undefined
+            }
+          >
+            {speech.listening ? '■ Stop' : '🎤 Speak'}
+          </button>
+        </div>
+        {speech.listening && (
+          <p className="mb-2 text-sm text-muted" aria-live="polite">
+            {speech.transcript || 'Listening…'}
+          </p>
+        )}
+        <textarea
+          id="desc"
+          className="field min-h-24 w-full"
+          value={summarizing ? 'Summarizing…' : description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Type, or use the mic"
+          disabled={summarizing}
+        />
+        {!online && (
+          <p className="mt-1 text-xs text-muted">Voice input needs a connection.</p>
+        )}
+      </div>
+
+      {/* Photos (SPEC 6.2) */}
+      <div className="mb-4">
+        <div className="mb-2 flex items-center gap-3">
+          <label
+            className={`btn ${!online || uploading ? 'pointer-events-none opacity-50' : ''}`}
+          >
+            {uploading ? 'Uploading…' : '📷 Add photo'}
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              multiple
+              onChange={handlePhotos}
+              disabled={!online || uploading}
+            />
+          </label>
+          {!online && (
+            <span className="text-xs text-muted">Add photos later when back online.</span>
+          )}
+        </div>
+        {photos.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {photos.map((p) => (
+              <div key={p.path} className="relative">
+                <img
+                  src={p.url}
+                  alt=""
+                  className="size-20 rounded-lg border border-edge object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() => removePhoto(p)}
+                  className="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-danger text-xs text-white"
+                  aria-label="Remove photo"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Urgent toggle (SPEC 6.2) */}
+      <label className="mb-5 flex items-center gap-2">
+        <input
+          type="checkbox"
+          checked={urgent}
+          onChange={(e) => setUrgent(e.target.checked)}
+          className="size-4"
+        />
+        Urgent
+      </label>
+
+      <button
+        type="button"
+        className="btn btn-primary w-full"
+        onClick={handleSave}
+        disabled={!room || saving || uploading}
+      >
+        {saving ? 'Saving…' : 'Save box'}
+      </button>
     </section>
   )
 }
