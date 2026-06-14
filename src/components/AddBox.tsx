@@ -1,104 +1,104 @@
-import { useEffect, useRef, useState, type ChangeEvent } from 'react'
-import { auth } from '../firebase'
-import { useRooms } from '../hooks/useRooms'
-import { useBoxes } from '../hooks/useBoxes'
-import { useOnline } from '../hooks/useOnline'
-import { useSpeechRecognition } from '../hooks/useSpeechRecognition'
-import { summarize } from '../llm'
-import { rangeEnd } from '../data/rooms'
-import { createBox, isRangeOverflow, newBoxId, nextBoxNumber } from '../data/boxes'
-import { deletePhotoPaths, uploadBoxPhoto, type UploadedPhoto } from '../data/photos'
-import { Spinner } from './Spinner'
-import type { RoomDoc } from '../types'
+import { useEffect, useRef, useState, type ChangeEvent } from 'react';
+import { auth } from '../firebase';
+import { useRooms } from '../hooks/useRooms';
+import { useBoxes } from '../hooks/useBoxes';
+import { useOnline } from '../hooks/useOnline';
+import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
+import { summarize } from '../llm';
+import { rangeEnd } from '../data/rooms';
+import { createBox, isRangeOverflow, newBoxId, nextBoxNumber } from '../data/boxes';
+import { deletePhotoPaths, uploadBoxPhoto, type UploadedPhoto } from '../data/photos';
+import { Spinner } from './Spinner';
+import type { RoomDoc } from '../types';
 
 // SPEC 6.2 — Add Box.
 export default function AddBox() {
-  const { rooms } = useRooms()
-  const { boxes } = useBoxes()
-  const online = useOnline()
+  const { rooms } = useRooms();
+  const { boxes } = useBoxes();
+  const online = useOnline();
 
-  const [docId, setDocId] = useState(newBoxId)
-  const [room, setRoom] = useState<RoomDoc | null>(null)
-  const [description, setDescription] = useState('')
-  const [urgent, setUrgent] = useState(false)
-  const [photos, setPhotos] = useState<UploadedPhoto[]>([])
-  const [uploading, setUploading] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [confirmation, setConfirmation] = useState<string | null>(null)
-  const [summarizing, setSummarizing] = useState(false)
-  const [removingPath, setRemovingPath] = useState<string | null>(null)
+  const [docId, setDocId] = useState(newBoxId);
+  const [room, setRoom] = useState<RoomDoc | null>(null);
+  const [description, setDescription] = useState('');
+  const [urgent, setUrgent] = useState(false);
+  const [photos, setPhotos] = useState<UploadedPhoto[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [confirmation, setConfirmation] = useState<string | null>(null);
+  const [summarizing, setSummarizing] = useState(false);
+  const [removingPath, setRemovingPath] = useState<string | null>(null);
 
   // When dictation ends, summarize the final transcript into the description.
   const speech = useSpeechRecognition('he-IL', (text) => {
-    setSummarizing(true)
+    setSummarizing(true);
     summarize(text)
       .then((s) => setDescription(s))
-      .finally(() => setSummarizing(false))
-  })
+      .finally(() => setSummarizing(false));
+  });
 
   // Refs for the unmount-time orphaned-photo prompt (SPEC 6.2).
-  const photosRef = useRef<UploadedPhoto[]>([])
-  const savedRef = useRef(false)
+  const photosRef = useRef<UploadedPhoto[]>([]);
+  const savedRef = useRef(false);
   useEffect(() => {
-    photosRef.current = photos
-  }, [photos])
+    photosRef.current = photos;
+  }, [photos]);
 
   useEffect(() => {
     return () => {
       if (!savedRef.current && photosRef.current.length > 0) {
         const ok = window.confirm(
-          `You added ${photosRef.current.length} photo(s) but didn't save this box. Delete them?`,
-        )
-        if (ok) deletePhotoPaths(photosRef.current.map((p) => p.path))
+          `You added ${photosRef.current.length} photo(s) but didn't save this box. Delete them?`
+        );
+        if (ok) deletePhotoPaths(photosRef.current.map((p) => p.path));
       }
-    }
-  }, [])
+    };
+  }, []);
 
   function toggleMic() {
-    if (speech.listening) speech.stop()
-    else speech.start()
+    if (speech.listening) speech.stop();
+    else speech.start();
   }
 
   async function handlePhotos(e: ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? [])
-    e.target.value = '' // allow re-selecting the same file
-    if (files.length === 0) return
-    setUploading(true)
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = ''; // allow re-selecting the same file
+    if (files.length === 0) return;
+    setUploading(true);
     try {
       for (const file of files) {
-        const uploaded = await uploadBoxPhoto(docId, file)
-        setPhotos((prev) => [...prev, uploaded])
+        const uploaded = await uploadBoxPhoto(docId, file);
+        setPhotos((prev) => [...prev, uploaded]);
       }
     } finally {
-      setUploading(false)
+      setUploading(false);
     }
   }
 
   async function removePhoto(photo: UploadedPhoto) {
-    setRemovingPath(photo.path)
+    setRemovingPath(photo.path);
     try {
-      await deletePhotoPaths([photo.path])
-      setPhotos((prev) => prev.filter((p) => p.path !== photo.path))
+      await deletePhotoPaths([photo.path]);
+      setPhotos((prev) => prev.filter((p) => p.path !== photo.path));
     } finally {
-      setRemovingPath(null)
+      setRemovingPath(null);
     }
   }
 
   function resetForm() {
-    savedRef.current = false
-    setDocId(newBoxId())
-    setRoom(null)
-    setDescription('')
-    setUrgent(false)
-    setPhotos([])
-    speech.reset()
+    savedRef.current = false;
+    setDocId(newBoxId());
+    setRoom(null);
+    setDescription('');
+    setUrgent(false);
+    setPhotos([]);
+    speech.reset();
   }
 
   async function handleSave() {
-    if (!room || saving) return
-    setSaving(true)
+    if (!room || saving) return;
+    setSaving(true);
     try {
-      const boxNumber = nextBoxNumber(room.name, room.rangeStart, boxes)
+      const boxNumber = nextBoxNumber(room.name, room.rangeStart, boxes);
       await createBox(docId, {
         boxNumber,
         room: room.name,
@@ -107,77 +107,69 @@ export default function AddBox() {
         urgent,
         photoUrls: photos.map((p) => p.url),
         addedBy: auth.currentUser?.email ?? 'unknown',
-      })
-      savedRef.current = true // photos now belong to a saved box
+      });
+      savedRef.current = true; // photos now belong to a saved box
 
-      let message = `Saved as Box #${boxNumber} (${room.name}) — write this on the box.`
+      let message = `Saved as Box #${boxNumber} (${room.name}) — write this on the box.`;
       if (isRangeOverflow(boxNumber, room.rangeStart)) {
         message += ` Box #${boxNumber} exceeds the ${room.name} range (${room.rangeStart}–${rangeEnd(
-          room.rangeStart,
-        )}) — consider widening the range in Config.`
+          room.rangeStart
+        )}) — consider widening the range in Config.`;
       }
-      setConfirmation(message)
-      resetForm()
+      setConfirmation(message);
+      resetForm();
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
   }
 
   return (
-    <section className="mx-auto max-w-xl p-4">
-      <h2 className="mb-3 text-xl font-semibold">Add Box</h2>
+    <section className='mx-auto max-w-xl p-4'>
+      <h2 className='mb-3 text-xl font-semibold'>Add Box</h2>
 
       {confirmation && (
-        <div
-          className="mb-4 rounded-lg border border-accent bg-accent/10 px-3 py-2 text-sm"
-          role="status"
-        >
+        <div className='mb-4 rounded-lg border border-accent bg-accent/10 px-3 py-2 text-sm' role='status'>
           {confirmation}
         </div>
       )}
 
       {/* Room picker (SPEC 6.2) */}
-      <fieldset className="mb-4">
-        <legend className="mb-2 text-sm text-muted">Room</legend>
+      <fieldset className='mb-4'>
+        <legend className='mb-2 text-sm text-muted'>Room</legend>
         {rooms.length === 0 ? (
-          <p className="text-sm text-muted">No rooms yet — add rooms in Config first.</p>
+          <p className='text-sm text-muted'>No rooms yet — add rooms in Config first.</p>
         ) : (
-          <div className="flex flex-wrap gap-2">
+          <div className='flex flex-wrap gap-2'>
             {rooms.map((r) => {
-              const selected = room?.id === r.id
+              const selected = room?.id === r.id;
               return (
                 <button
                   key={r.id}
-                  type="button"
+                  type='button'
                   onClick={() => setRoom(r)}
                   className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition-colors ${
                     selected ? 'border-accent bg-accent/15 font-semibold' : 'border-edge'
                   }`}
-                  aria-pressed={selected}
-                >
-                  <span
-                    className="size-3 rounded-full"
-                    style={{ background: r.color }}
-                    aria-hidden="true"
-                  />
+                  aria-pressed={selected}>
+                  <span className='size-3 rounded-full' style={{ background: r.color }} aria-hidden='true' />
                   {r.name}
                 </button>
-              )
+              );
             })}
           </div>
         )}
       </fieldset>
 
       {/* Description + mic (SPEC 6.2 / 7) */}
-      <div className="mb-4">
-        <div className="mb-2 flex items-center justify-between gap-2">
-          <label htmlFor="desc" className="flex items-center gap-2 text-sm text-muted">
+      <div className='mb-4'>
+        <div className='mb-2 flex items-center justify-between gap-2'>
+          <label htmlFor='desc' className='flex items-center gap-2 text-sm text-muted'>
             Description
-            {summarizing && <Spinner className="size-3.5" />}
+            {summarizing && <Spinner className='size-3.5' />}
           </label>
           <button
-            type="button"
-            className="btn"
+            type='button'
+            className='btn'
             onClick={toggleMic}
             disabled={!online || !speech.supported}
             title={
@@ -186,35 +178,31 @@ export default function AddBox() {
                 : !speech.supported
                   ? 'Voice not supported on this browser'
                   : undefined
-            }
-          >
+            }>
             {speech.listening ? '■ Stop' : '🎤 Speak'}
           </button>
         </div>
         {speech.listening && (
-          <p className="mb-2 text-sm text-muted" aria-live="polite">
+          <p className='mb-2 text-sm text-muted' aria-live='polite'>
             {speech.transcript || 'Listening…'}
           </p>
         )}
         <textarea
-          id="desc"
-          className="field min-h-24 w-full"
+          id='desc'
+          className='field min-h-24 w-full'
           value={summarizing ? 'Summarizing…' : description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder="Type, or use the mic"
+          placeholder='Type, or use the mic'
           disabled={summarizing}
         />
-        {!online && (
-          <p className="mt-1 text-xs text-muted">Voice input needs a connection.</p>
-        )}
+        {!online && <p className='mt-1 text-xs text-muted'>Voice input needs a connection.</p>}
       </div>
 
       {/* Photos (SPEC 6.2) */}
-      <div className="mb-4">
-        <div className="mb-2 flex items-center gap-3">
+      <div className='mb-4'>
+        <div className='mb-2 flex items-center gap-3'>
           <label
-            className={`btn inline-flex items-center gap-2 ${!online || uploading ? 'pointer-events-none opacity-50' : ''}`}
-          >
+            className={`btn inline-flex items-center gap-2 ${!online || uploading ? 'pointer-events-none opacity-50' : ''}`}>
             {uploading ? (
               <>
                 <Spinner /> Uploading…
@@ -223,39 +211,32 @@ export default function AddBox() {
               '📷 Add photo'
             )}
             <input
-              type="file"
-              accept="image/*"
-              capture="environment"
-              className="hidden"
+              type='file'
+              accept='image/*'
+              capture='environment'
+              className='hidden'
               multiple
               onChange={handlePhotos}
               disabled={!online || uploading}
             />
           </label>
-          {!online && (
-            <span className="text-xs text-muted">Add photos later when back online.</span>
-          )}
+          {!online && <span className='text-xs text-muted'>Add photos later when back online.</span>}
         </div>
         {photos.length > 0 && (
-          <div className="flex flex-wrap gap-2">
+          <div className='flex flex-wrap gap-2'>
             {photos.map((p) => (
-              <div key={p.path} className="relative">
-                <img
-                  src={p.url}
-                  alt=""
-                  className="size-20 rounded-lg border border-edge object-cover"
-                />
+              <div key={p.path} className='relative'>
+                <img src={p.url} alt='' className='size-20 rounded-lg border border-edge object-cover' />
                 {removingPath === p.path ? (
-                  <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/50 text-white">
+                  <div className='absolute inset-0 flex items-center justify-center rounded-lg bg-black/50 text-white'>
                     <Spinner />
                   </div>
                 ) : (
                   <button
-                    type="button"
+                    type='button'
                     onClick={() => removePhoto(p)}
-                    className="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-danger text-xs text-white"
-                    aria-label="Remove photo"
-                  >
+                    className='absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-danger text-xs text-white'
+                    aria-label='Remove photo'>
                     ×
                   </button>
                 )}
@@ -266,27 +247,19 @@ export default function AddBox() {
       </div>
 
       {/* Urgent toggle (SPEC 6.2) */}
-      <div className="mb-5">
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={urgent}
-            onChange={(e) => setUrgent(e.target.checked)}
-            className="size-4"
-          />
+      <div className='mb-5'>
+        <label className='flex items-center gap-2'>
+          <input type='checkbox' checked={urgent} onChange={(e) => setUrgent(e.target.checked)} className='size-4' />
           Urgent
         </label>
-        <p className="mt-1 text-xs text-muted">
-          Mark boxes to open first (meds, chargers, toiletries). Filterable in Browse.
-        </p>
+        <p className='mt-1 text-xs text-muted'>Mark boxes to open first.</p>
       </div>
 
       <button
-        type="button"
-        className="btn btn-primary inline-flex w-full items-center justify-center gap-2"
+        type='button'
+        className='btn btn-primary inline-flex w-full items-center justify-center gap-2'
         onClick={handleSave}
-        disabled={!room || saving || uploading}
-      >
+        disabled={!room || saving || uploading}>
         {saving ? (
           <>
             <Spinner /> Saving…
@@ -296,5 +269,5 @@ export default function AddBox() {
         )}
       </button>
     </section>
-  )
+  );
 }
