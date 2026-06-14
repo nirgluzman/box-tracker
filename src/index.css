@@ -34,6 +34,33 @@ body {
   flex-direction: column;
 }
 
+/* Portrait-only on phones. The PWA manifest locks orientation when installed;
+   this is the fallback for the browser tab, where the manifest doesn't apply.
+   Scoped to phone-sized landscape (max-height 600px) so desktop/tablet landscape
+   is never blocked. */
+.landscape-block {
+  display: none;
+}
+@media (orientation: landscape) and (max-height: 600px) {
+  #root {
+    display: none;
+  }
+  .landscape-block {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 1.5rem;
+    text-align: center;
+    background: var(--color-bg);
+    color: var(--color-fg);
+  }
+}
+
 /* Reusable element styles (used across screens to avoid repeating long class
    strings on every button/input). */
 @layer components {

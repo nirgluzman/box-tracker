@@ -224,6 +224,7 @@ function BoxCard({
           ))}
         </div>
       )}
+      <p className="mb-2 text-xs text-muted">Added by {box.addedBy}</p>
       <div className="flex gap-2">
         <button type="button" className="btn" onClick={onEdit}>
           Edit
