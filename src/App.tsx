@@ -60,13 +60,15 @@ export default function App() {
           </button>
         </div>
       </header>
+      {/* Rendered before <main>: a top bar on desktop (md:static), and pinned
+          to the bottom on mobile via position:fixed (DOM order irrelevant). */}
+      <Nav active={screen} onChange={setScreen} />
       <main>
         {screen === 'add' && <AddBox />}
         {screen === 'browse' && <Browse />}
         {screen === 'unpack' && <Unpack />}
         {screen === 'config' && <Config />}
       </main>
-      <Nav active={screen} onChange={setScreen} />
     </div>
   )
 }
