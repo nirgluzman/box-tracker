@@ -7,6 +7,7 @@ import AddBox from './components/AddBox'
 import Browse from './components/Browse'
 import Unpack from './components/Unpack'
 import Config from './components/Config'
+import { InstallButton } from './components/InstallButton'
 
 function OfflineBanner() {
   const [online, setOnline] = useState(navigator.onLine)
@@ -52,7 +53,8 @@ export default function App() {
       <header className="flex items-center justify-between gap-3 border-b border-edge bg-surface px-4 py-2.5">
         <span className="text-lg font-bold text-accent">BoxBuddy</span>
         <div className="flex items-center gap-3">
-          <span className="max-w-[55vw] truncate text-sm text-muted" title={user.email ?? undefined}>
+          <InstallButton />
+          <span className="max-w-[40vw] truncate text-sm text-muted" title={user.email ?? undefined}>
             {user.email}
           </span>
           <button type="button" className="btn" onClick={() => signOut(auth)}>
