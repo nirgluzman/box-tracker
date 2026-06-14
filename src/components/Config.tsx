@@ -20,12 +20,14 @@ import {
   planImport,
   type ImportPlan,
 } from '../data/csv'
+import { deleteOrphanFolder, listOrphanedFolders, type OrphanFolder } from '../data/photos'
+import { useOnline } from '../hooks/useOnline'
 
-// SPEC 6.5 — Config / room manager + CSV download/upload (SPEC 8).
-// Orphaned-photos cleanup (SPEC 6.2) lands in a later phase.
+// SPEC 6.5 — Config / room manager + CSV download/upload (SPEC 8) + orphaned-photos cleanup (SPEC 6.2).
 export default function Config() {
   const { rooms, loading } = useRooms()
   const { boxes } = useBoxes()
+  const online = useOnline()
   const boxNumbers = boxes.map((b) => b.boxNumber)
 
   const [adding, setAdding] = useState(false)
@@ -62,6 +64,37 @@ export default function Config() {
       setPlan(null)
     } finally {
       setApplying(false)
+    }
+  }
+
+  // Orphaned-photos cleanup (SPEC 6.2/6.5) — requires a connection.
+  const [scanning, setScanning] = useState(false)
+  const [orphans, setOrphans] = useState<OrphanFolder[] | null>(null)
+  const [orphanError, setOrphanError] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+
+  async function scanOrphans() {
+    setScanning(true)
+    setOrphanError(null)
+    try {
+      const liveIds = new Set(boxes.map((b) => b.id))
+      setOrphans(await listOrphanedFolders(liveIds))
+    } catch (err) {
+      setOrphanError(err instanceof Error ? err.message : 'Scan failed.')
+    } finally {
+      setScanning(false)
+    }
+  }
+
+  async function removeOrphan(docId: string) {
+    setDeletingId(docId)
+    try {
+      await deleteOrphanFolder(docId)
+      setOrphans((prev) => prev?.filter((o) => o.docId !== docId) ?? null)
+    } catch (err) {
+      setOrphanError(err instanceof Error ? err.message : 'Delete failed.')
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -170,8 +203,14 @@ export default function Config() {
           className="hidden"
           onChange={handleFile}
         />
-        <button type="button" className="btn" disabled title="Coming in a later phase">
-          Orphaned photos
+        <button
+          type="button"
+          className="btn"
+          onClick={scanOrphans}
+          disabled={scanning || !online}
+          title={online ? 'Scan for photos with no box' : 'Requires a connection'}
+        >
+          {scanning ? 'Scanning…' : 'Orphaned photos'}
         </button>
       </div>
 
@@ -179,6 +218,52 @@ export default function Config() {
         <p className="mt-3 text-sm text-danger" role="alert">
           {importError}
         </p>
+      )}
+
+      {orphanError && (
+        <p className="mt-3 text-sm text-danger" role="alert">
+          {orphanError}
+        </p>
+      )}
+
+      {orphans && (
+        <div className="mt-4 rounded-lg border border-edge bg-surface p-3">
+          <h3 className="mb-2 font-semibold">Orphaned photos</h3>
+          {orphans.length === 0 ? (
+            <p className="text-sm text-muted">No orphaned photo folders found.</p>
+          ) : (
+            <ul className="list-none p-0">
+              {orphans.map((o) => (
+                <li
+                  key={o.docId}
+                  className="flex items-center gap-2.5 border-b border-edge py-2"
+                >
+                  {o.thumbUrl ? (
+                    <img
+                      src={o.thumbUrl}
+                      alt=""
+                      className="size-10 shrink-0 rounded object-cover"
+                    />
+                  ) : (
+                    <span className="size-10 shrink-0 rounded bg-edge" aria-hidden="true" />
+                  )}
+                  <span className="flex-1 text-sm">
+                    {o.count} photo{o.count === 1 ? '' : 's'}
+                    <span className="block text-xs text-muted">{o.docId}</span>
+                  </span>
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={() => removeOrphan(o.docId)}
+                    disabled={deletingId === o.docId}
+                  >
+                    {deletingId === o.docId ? 'Deleting…' : 'Delete'}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       )}
 
       {plan && (
