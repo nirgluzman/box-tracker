@@ -12,6 +12,7 @@ import {
   suggestNextRangeStart,
   updateRoom,
 } from '../data/rooms'
+import { downloadBoxesCsv } from '../data/csv'
 
 // SPEC 6.5 — Config / room manager.
 // CSV download/upload (SPEC 8) and orphaned-photos cleanup (SPEC 6.2) land in
@@ -111,7 +112,12 @@ export default function Config() {
       )}
 
       <div className="mt-6 flex flex-wrap gap-2 border-t border-edge pt-4">
-        <button type="button" className="btn" disabled title="Coming in a later phase">
+        <button
+          type="button"
+          className="btn"
+          onClick={() => downloadBoxesCsv(boxes)}
+          disabled={boxes.length === 0}
+        >
           Download CSV
         </button>
         <button type="button" className="btn" disabled title="Coming in a later phase">
