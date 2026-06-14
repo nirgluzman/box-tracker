@@ -1,0 +1,15 @@
+# Claude Code personal/local settings (per-user, not shared)
+.claude/settings.local.json
+
+# Dependencies and build output
+node_modules/
+dist/
+
+# Environment variables (secrets, local config)
+.env
+.env*.local
+
+# Firebase CLI
+.firebase/
+firebase-debug.log
+*-debug.log
