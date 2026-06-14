@@ -48,9 +48,6 @@ export default function Login() {
           {busy ? 'Signing in…' : 'Sign in'}
         </button>
       </form>
-      <button type="button" disabled title="coming soon">
-        Sign in with Google (coming soon)
-      </button>
     </div>
   )
 }

@@ -100,13 +100,11 @@ Seed rooms (optional starting set):
 - All users have equal permissions, no roles.
 - Auth state persists per device.
 - No self-service password reset in-app; a forgotten password is handled by an admin in the Firebase Console (or via the console's "send password reset email").
-- "Sign in with Google" button visible, disabled, labeled "coming soon".
 
 ## 6. Screens
 
 ### 6.1 Login
 - Email + password fields, sign-in button.
-- Disabled Google sign-in button below.
 - On success, redirect to Add Box screen.
 - On failure, show inline error message.
 
@@ -268,7 +266,7 @@ VITE_LLM_API_KEY=
 6. Define shared interfaces in `types.ts`: `Box` and `Room`, matching sections 4.1 and 4.2.
 7. Build `firebase.ts`: initialize app, export auth, db, storage instances, enable Firestore offline persistence via `initializeFirestore` + `persistentLocalCache`/`persistentMultipleTabManager` (section 13).
 8. Install and configure `vite-plugin-pwa`: manifest (name, icons, theme color) and service worker with photo runtime caching.
-9. Build `Login.tsx`: email/password sign-in, disabled Google button.
+9. Build `Login.tsx`: email/password sign-in.
 10. Build `Nav.tsx`: responsive nav, bottom bar on mobile, top bar on desktop.
 11. Build offline indicator component, shown when `navigator.onLine` is false.
 12. Seed `rooms` collection with starting rooms, colors, and ranges (section 4.2), or build empty and let Config screen populate it.
@@ -284,3 +282,13 @@ VITE_LLM_API_KEY=
 22. Push to `main`, verify app deploy to Firebase Hosting and rules deploy to Firestore/Storage.
 23. Test offline: enable airplane mode, add a box with typed description and no photo, reconnect, verify it syncs to Firestore and photos can be added via Edit.
 24. Test on an Android phone (primary target): Hebrew voice input, photo upload, CSV full round-trip (export → edit → import, verify no unintended deletions), install as PWA.
+
+## 15. Future Development & Improvements
+Out of scope for the initial launch (closed 4-user audience, Android-only). Captured here so the decisions aren't lost.
+
+- **Google sign-in.** Add "Sign in with Google" as an auth provider alongside email/password. Removed from launch to keep auth to manually-provisioned email/password accounts. Revisit if the user base grows beyond the 4 known users or self-service onboarding is wanted.
+- **LLM summarization provider.** `llm.ts` ships in passthrough mode (returns the raw transcript). Choose a provider (e.g. Gemini 2.0 Flash), wire `summarize()`, and restrict the API key by HTTP referrer (section 7 / 10.3). If abuse/cost is a concern, move summarization behind a server-side proxy (e.g. a Cloud Function) so the key never ships to the client.
+- **Self-service password reset.** Currently handled by an admin in the Firebase Console (section 5). Could add an in-app "forgot password" flow.
+- **iOS support.** Android-only at launch because iOS Safari lacks Web Speech API (section 2). A text-only fallback (no mic) could open the app to iOS.
+- **Bundle size.** The Firebase SDK produces a single large chunk (~600 KB). Consider route-level code-splitting / dynamic imports if load time becomes an issue.
+- **Branded PWA icons.** Launch ships placeholder solid-color icons under `public/icons/`; replace with designed artwork.
