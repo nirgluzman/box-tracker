@@ -22,6 +22,7 @@ import {
 } from '../data/csv'
 import { deleteOrphanFolder, listOrphanedFolders, type OrphanFolder } from '../data/photos'
 import { useOnline } from '../hooks/useOnline'
+import { Spinner } from './Spinner'
 
 // SPEC 6.5 — Config / room manager + CSV download/upload (SPEC 8) + orphaned-photos cleanup (SPEC 6.2).
 export default function Config() {
@@ -210,7 +211,13 @@ export default function Config() {
           disabled={scanning || !online}
           title={online ? 'Scan for photos with no box' : 'Requires a connection'}
         >
-          {scanning ? 'Scanning…' : 'Orphaned photos'}
+          {scanning ? (
+            <span className="inline-flex items-center gap-2">
+              <Spinner /> Scanning…
+            </span>
+          ) : (
+            'Orphaned photos'
+          )}
         </button>
       </div>
 
@@ -257,7 +264,7 @@ export default function Config() {
                     onClick={() => removeOrphan(o.docId)}
                     disabled={deletingId === o.docId}
                   >
-                    {deletingId === o.docId ? 'Deleting…' : 'Delete'}
+                    {deletingId === o.docId ? <Spinner /> : 'Delete'}
                   </button>
                 </li>
               ))}
@@ -289,11 +296,17 @@ export default function Config() {
           <div className="flex gap-2">
             <button
               type="button"
-              className="btn btn-primary"
+              className="btn btn-primary inline-flex items-center gap-2"
               onClick={confirmImport}
               disabled={applying || (plan.highDeletion && !ackDeletion)}
             >
-              {applying ? 'Applying…' : 'Apply changes'}
+              {applying ? (
+                <>
+                  <Spinner /> Applying…
+                </>
+              ) : (
+                'Apply changes'
+              )}
             </button>
             <button
               type="button"
@@ -398,8 +411,18 @@ function RoomForm({
       )}
 
       <div className="flex flex-wrap gap-2">
-        <button type="submit" className="btn btn-primary" disabled={busy || !name.trim()}>
-          {busy ? 'Saving…' : submitLabel}
+        <button
+          type="submit"
+          className="btn btn-primary inline-flex items-center gap-2"
+          disabled={busy || !name.trim()}
+        >
+          {busy ? (
+            <>
+              <Spinner /> Saving…
+            </>
+          ) : (
+            submitLabel
+          )}
         </button>
         <button type="button" className="btn" onClick={onCancel} disabled={busy}>
           Cancel

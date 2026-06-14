@@ -3,6 +3,7 @@ import { useBoxes } from '../hooks/useBoxes'
 import { useRooms } from '../hooks/useRooms'
 import { boxKey, deleteBox, duplicateKeys, updateBox } from '../data/boxes'
 import { downloadBoxesCsv } from '../data/csv'
+import { Spinner } from './Spinner'
 import type { BoxDoc, RoomDoc } from '../types'
 
 // SPEC 6.3 — Browse. Real-time list, filters, responsive cards/table,
@@ -14,6 +15,7 @@ export default function Browse() {
   const [roomFilter, setRoomFilter] = useState('all')
   const [urgentOnly, setUrgentOnly] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   const dupKeys = useMemo(() => duplicateKeys(boxes), [boxes])
 
@@ -24,7 +26,12 @@ export default function Browse() {
   async function handleDelete(box: BoxDoc) {
     if (!window.confirm(`Delete Box #${box.boxNumber} (${box.room})? This also removes its photos.`))
       return
-    await deleteBox(box)
+    setDeletingId(box.id)
+    try {
+      await deleteBox(box)
+    } finally {
+      setDeletingId(null)
+    }
   }
 
   if (loading)
@@ -95,6 +102,7 @@ export default function Browse() {
                   <BoxCard
                     box={box}
                     duplicate={dupKeys.has(boxKey(box))}
+                    deleting={deletingId === box.id}
                     onEdit={() => setEditingId(box.id)}
                     onDelete={() => handleDelete(box)}
                   />
@@ -145,8 +153,13 @@ export default function Browse() {
                         <button type="button" className="btn" onClick={() => setEditingId(box.id)}>
                           Edit
                         </button>
-                        <button type="button" className="btn" onClick={() => handleDelete(box)}>
-                          Delete
+                        <button
+                          type="button"
+                          className="btn inline-flex items-center gap-2"
+                          onClick={() => handleDelete(box)}
+                          disabled={deletingId === box.id}
+                        >
+                          {deletingId === box.id ? <Spinner /> : 'Delete'}
                         </button>
                       </div>
                     </td>
@@ -175,11 +188,13 @@ function DuplicateBadge() {
 function BoxCard({
   box,
   duplicate,
+  deleting,
   onEdit,
   onDelete,
 }: {
   box: BoxDoc
   duplicate: boolean
+  deleting: boolean
   onEdit: () => void
   onDelete: () => void
 }) {
@@ -213,8 +228,13 @@ function BoxCard({
         <button type="button" className="btn" onClick={onEdit}>
           Edit
         </button>
-        <button type="button" className="btn" onClick={onDelete}>
-          Delete
+        <button
+          type="button"
+          className="btn inline-flex items-center gap-2"
+          onClick={onDelete}
+          disabled={deleting}
+        >
+          {deleting ? <Spinner /> : 'Delete'}
         </button>
       </div>
     </div>
@@ -275,8 +295,19 @@ function EditForm({ box, rooms, onDone }: { box: BoxDoc; rooms: RoomDoc[]; onDon
         Urgent
       </label>
       <div className="flex gap-2">
-        <button type="button" className="btn btn-primary" onClick={save} disabled={busy}>
-          {busy ? 'Saving…' : 'Save'}
+        <button
+          type="button"
+          className="btn btn-primary inline-flex items-center gap-2"
+          onClick={save}
+          disabled={busy}
+        >
+          {busy ? (
+            <>
+              <Spinner /> Saving…
+            </>
+          ) : (
+            'Save'
+          )}
         </button>
         <button type="button" className="btn" onClick={onDone} disabled={busy}>
           Cancel

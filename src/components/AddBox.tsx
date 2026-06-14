@@ -8,6 +8,7 @@ import { summarize } from '../llm'
 import { rangeEnd } from '../data/rooms'
 import { createBox, isRangeOverflow, newBoxId, nextBoxNumber } from '../data/boxes'
 import { deletePhotoPaths, uploadBoxPhoto, type UploadedPhoto } from '../data/photos'
+import { Spinner } from './Spinner'
 import type { RoomDoc } from '../types'
 
 // SPEC 6.2 — Add Box.
@@ -15,7 +16,6 @@ export default function AddBox() {
   const { rooms } = useRooms()
   const { boxes } = useBoxes()
   const online = useOnline()
-  const speech = useSpeechRecognition('he-IL')
 
   const [docId, setDocId] = useState(newBoxId)
   const [room, setRoom] = useState<RoomDoc | null>(null)
@@ -26,12 +26,22 @@ export default function AddBox() {
   const [saving, setSaving] = useState(false)
   const [confirmation, setConfirmation] = useState<string | null>(null)
   const [summarizing, setSummarizing] = useState(false)
-  const awaitingSummary = useRef(false)
+  const [removingPath, setRemovingPath] = useState<string | null>(null)
+
+  // When dictation ends, summarize the final transcript into the description.
+  const speech = useSpeechRecognition('he-IL', (text) => {
+    setSummarizing(true)
+    summarize(text)
+      .then((s) => setDescription(s))
+      .finally(() => setSummarizing(false))
+  })
 
   // Refs for the unmount-time orphaned-photo prompt (SPEC 6.2).
   const photosRef = useRef<UploadedPhoto[]>([])
   const savedRef = useRef(false)
-  photosRef.current = photos
+  useEffect(() => {
+    photosRef.current = photos
+  }, [photos])
 
   useEffect(() => {
     return () => {
@@ -44,25 +54,9 @@ export default function AddBox() {
     }
   }, [])
 
-  // When dictation stops, summarize the transcript into the description.
-  useEffect(() => {
-    if (speech.listening || !awaitingSummary.current) return
-    awaitingSummary.current = false
-    const text = speech.transcript.trim()
-    if (!text) return
-    setSummarizing(true)
-    summarize(text)
-      .then((s) => setDescription(s))
-      .finally(() => setSummarizing(false))
-  }, [speech.listening, speech.transcript])
-
   function toggleMic() {
-    if (speech.listening) {
-      speech.stop()
-    } else {
-      awaitingSummary.current = true
-      speech.start()
-    }
+    if (speech.listening) speech.stop()
+    else speech.start()
   }
 
   async function handlePhotos(e: ChangeEvent<HTMLInputElement>) {
@@ -81,8 +75,13 @@ export default function AddBox() {
   }
 
   async function removePhoto(photo: UploadedPhoto) {
-    await deletePhotoPaths([photo.path])
-    setPhotos((prev) => prev.filter((p) => p.path !== photo.path))
+    setRemovingPath(photo.path)
+    try {
+      await deletePhotoPaths([photo.path])
+      setPhotos((prev) => prev.filter((p) => p.path !== photo.path))
+    } finally {
+      setRemovingPath(null)
+    }
   }
 
   function resetForm() {
@@ -172,8 +171,9 @@ export default function AddBox() {
       {/* Description + mic (SPEC 6.2 / 7) */}
       <div className="mb-4">
         <div className="mb-2 flex items-center justify-between gap-2">
-          <label htmlFor="desc" className="text-sm text-muted">
+          <label htmlFor="desc" className="flex items-center gap-2 text-sm text-muted">
             Description
+            {summarizing && <Spinner className="size-3.5" />}
           </label>
           <button
             type="button"
@@ -213,9 +213,15 @@ export default function AddBox() {
       <div className="mb-4">
         <div className="mb-2 flex items-center gap-3">
           <label
-            className={`btn ${!online || uploading ? 'pointer-events-none opacity-50' : ''}`}
+            className={`btn inline-flex items-center gap-2 ${!online || uploading ? 'pointer-events-none opacity-50' : ''}`}
           >
-            {uploading ? 'Uploading…' : '📷 Add photo'}
+            {uploading ? (
+              <>
+                <Spinner /> Uploading…
+              </>
+            ) : (
+              '📷 Add photo'
+            )}
             <input
               type="file"
               accept="image/*"
@@ -239,14 +245,20 @@ export default function AddBox() {
                   alt=""
                   className="size-20 rounded-lg border border-edge object-cover"
                 />
-                <button
-                  type="button"
-                  onClick={() => removePhoto(p)}
-                  className="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-danger text-xs text-white"
-                  aria-label="Remove photo"
-                >
-                  ×
-                </button>
+                {removingPath === p.path ? (
+                  <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/50 text-white">
+                    <Spinner />
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => removePhoto(p)}
+                    className="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-danger text-xs text-white"
+                    aria-label="Remove photo"
+                  >
+                    ×
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -254,23 +266,34 @@ export default function AddBox() {
       </div>
 
       {/* Urgent toggle (SPEC 6.2) */}
-      <label className="mb-5 flex items-center gap-2">
-        <input
-          type="checkbox"
-          checked={urgent}
-          onChange={(e) => setUrgent(e.target.checked)}
-          className="size-4"
-        />
-        Urgent
-      </label>
+      <div className="mb-5">
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={urgent}
+            onChange={(e) => setUrgent(e.target.checked)}
+            className="size-4"
+          />
+          Urgent
+        </label>
+        <p className="mt-1 text-xs text-muted">
+          Mark boxes to open first (meds, chargers, toiletries). Filterable in Browse.
+        </p>
+      </div>
 
       <button
         type="button"
-        className="btn btn-primary w-full"
+        className="btn btn-primary inline-flex w-full items-center justify-center gap-2"
         onClick={handleSave}
         disabled={!room || saving || uploading}
       >
-        {saving ? 'Saving…' : 'Save box'}
+        {saving ? (
+          <>
+            <Spinner /> Saving…
+          </>
+        ) : (
+          'Save box'
+        )}
       </button>
     </section>
   )
