@@ -241,7 +241,7 @@ VITE_LLM_API_KEY=
 ## 12. CI/CD — GitHub Actions
 - Workflow file: `.github/workflows/deploy.yml`.
 - Trigger: push to `main`.
-- Steps: checkout, set up Node, `npm ci` (reproducible install from lockfile), `npm run build` (env vars from secrets), deploy `dist/` to Firebase Hosting, deploy `firestore.rules` and `storage.rules` via `firebase deploy --only firestore:rules,storage:rules`.
+- Steps: checkout, set up Node, `npm ci` (reproducible install from lockfile), `npm run build` (env vars from secrets), deploy `dist/` to Firebase Hosting, deploy `firestore.rules` and `storage.rules` via `firebase deploy --only firestore:rules,storage` (note: Storage has no `:rules` sub-target — `storage:rules` is parsed as a named bucket target and fails; use `storage`).
 - Additional secret required: `FIREBASE_SERVICE_ACCOUNT` (JSON key for deploy auth, used for both Hosting and rules deploys).
 
 ## 13. Offline / PWA Support
