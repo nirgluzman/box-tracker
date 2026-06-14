@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import { useRooms } from '../hooks/useRooms'
 import { useBoxes } from '../hooks/useBoxes'
 import type { Room, RoomDoc } from '../types'
@@ -12,11 +12,17 @@ import {
   suggestNextRangeStart,
   updateRoom,
 } from '../data/rooms'
-import { downloadBoxesCsv } from '../data/csv'
+import { applyImportPlan } from '../data/boxes'
+import {
+  csvToRecords,
+  downloadBoxesCsv,
+  parseCsv,
+  planImport,
+  type ImportPlan,
+} from '../data/csv'
 
-// SPEC 6.5 — Config / room manager.
-// CSV download/upload (SPEC 8) and orphaned-photos cleanup (SPEC 6.2) land in
-// later phases; their buttons are shown disabled below.
+// SPEC 6.5 — Config / room manager + CSV download/upload (SPEC 8).
+// Orphaned-photos cleanup (SPEC 6.2) lands in a later phase.
 export default function Config() {
   const { rooms, loading } = useRooms()
   const { boxes } = useBoxes()
@@ -24,6 +30,40 @@ export default function Config() {
 
   const [adding, setAdding] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+
+  // CSV import (SPEC 8.2)
+  const fileRef = useRef<HTMLInputElement>(null)
+  const [plan, setPlan] = useState<ImportPlan | null>(null)
+  const [importError, setImportError] = useState<string | null>(null)
+  const [ackDeletion, setAckDeletion] = useState(false)
+  const [applying, setApplying] = useState(false)
+
+  async function handleFile(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setImportError(null)
+    setAckDeletion(false)
+    try {
+      const text = await file.text()
+      const records = csvToRecords(parseCsv(text))
+      setPlan(planImport(records, boxes, rooms))
+    } catch (err) {
+      setPlan(null)
+      setImportError(err instanceof Error ? err.message : 'Could not read this file.')
+    }
+  }
+
+  async function confirmImport() {
+    if (!plan) return
+    setApplying(true)
+    try {
+      await applyImportPlan(plan)
+      setPlan(null)
+    } finally {
+      setApplying(false)
+    }
+  }
 
   async function handleDelete(room: RoomDoc) {
     if (!window.confirm(`Delete room "${room.name}"? Existing boxes keep their number and color.`))
@@ -120,13 +160,67 @@ export default function Config() {
         >
           Download CSV
         </button>
-        <button type="button" className="btn" disabled title="Coming in a later phase">
+        <button type="button" className="btn" onClick={() => fileRef.current?.click()}>
           Upload CSV
         </button>
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".csv,text/csv"
+          className="hidden"
+          onChange={handleFile}
+        />
         <button type="button" className="btn" disabled title="Coming in a later phase">
           Orphaned photos
         </button>
       </div>
+
+      {importError && (
+        <p className="mt-3 text-sm text-danger" role="alert">
+          {importError}
+        </p>
+      )}
+
+      {plan && (
+        <div className="mt-4 rounded-lg border border-edge bg-surface p-3">
+          <h3 className="mb-2 font-semibold">Review import</h3>
+          <ul className="mb-3 text-sm">
+            <li>Updates: {plan.updates.length}</li>
+            <li>New boxes: {plan.creates.length}</li>
+            <li>Deletions: {plan.deletes.length}</li>
+          </ul>
+          {plan.highDeletion && (
+            <label className="mb-3 flex items-start gap-2 text-sm text-warn">
+              <input
+                type="checkbox"
+                className="mt-0.5 size-4"
+                checked={ackDeletion}
+                onChange={(e) => setAckDeletion(e.target.checked)}
+              />
+              This file deletes {plan.deletes.length} of {boxes.length} boxes — it may be a
+              partial export. I understand and want to proceed.
+            </label>
+          )}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={confirmImport}
+              disabled={applying || (plan.highDeletion && !ackDeletion)}
+            >
+              {applying ? 'Applying…' : 'Apply changes'}
+            </button>
+            <button
+              type="button"
+              className="btn"
+              onClick={() => setPlan(null)}
+              disabled={applying}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </section>
   )
 }

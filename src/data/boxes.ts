@@ -1,6 +1,15 @@
-import { collection, deleteDoc, doc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore'
+import {
+  collection,
+  deleteDoc,
+  doc,
+  serverTimestamp,
+  setDoc,
+  updateDoc,
+  writeBatch,
+} from 'firebase/firestore'
 import { db } from '../firebase'
 import type { Box, BoxDoc } from '../types'
+import type { ImportPlan } from './csv'
 import { rangeEnd } from './rooms'
 import { deletePhotoUrls } from './photos'
 
@@ -53,4 +62,18 @@ export function duplicateKeys(boxes: BoxDoc[]): Set<string> {
 
 export function boxKey(box: BoxDoc): string {
   return `${box.room}|${box.boxNumber}`
+}
+
+// Apply a CSV import diff (SPEC 8.2) in one batch, then remove Storage photos
+// for deleted boxes. (writeBatch caps at 500 ops — fine for this app's size.)
+export async function applyImportPlan(plan: ImportPlan): Promise<void> {
+  const batch = writeBatch(db)
+  for (const u of plan.updates) batch.update(doc(db, 'boxes', u.id), u.patch)
+  for (const c of plan.creates)
+    batch.set(doc(collection(db, 'boxes')), { ...c, createdAt: serverTimestamp() })
+  for (const d of plan.deletes) batch.delete(doc(db, 'boxes', d.id))
+  await batch.commit()
+
+  const urls = plan.deletes.flatMap((d) => d.photoUrls)
+  if (urls.length > 0) await deletePhotoUrls(urls)
 }
