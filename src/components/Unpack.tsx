@@ -3,9 +3,9 @@
 // matches on multi-match, "Box not found" on no match.
 export default function Unpack() {
   return (
-    <section className="screen">
-      <h2>Unpack</h2>
-      <p>Search by box number — not yet implemented.</p>
+    <section className="p-4">
+      <h2 className="mb-2 text-xl font-semibold">Unpack</h2>
+      <p className="text-muted">Search by box number — not yet implemented.</p>
     </section>
   )
 }

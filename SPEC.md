@@ -99,6 +99,7 @@ Seed rooms (optional starting set):
 - 4 users added manually in Firebase Console: Nir, Oshra, Idan, Itay.
 - All users have equal permissions, no roles.
 - Auth state persists per device.
+- Sign-out button in the app header (visible on every screen once signed in); signing out returns to the Login screen.
 - No self-service password reset in-app; a forgotten password is handled by an admin in the Firebase Console (or via the console's "send password reset email").
 
 ## 6. Screens
@@ -267,7 +268,7 @@ VITE_LLM_API_KEY=
 7. Build `firebase.ts`: initialize app, export auth, db, storage instances, enable Firestore offline persistence via `initializeFirestore` + `persistentLocalCache`/`persistentMultipleTabManager` (section 13).
 8. Install and configure `vite-plugin-pwa`: manifest (name, icons, theme color) and service worker with photo runtime caching.
 9. Build `Login.tsx`: email/password sign-in.
-10. Build `Nav.tsx`: responsive nav, bottom bar on mobile, top bar on desktop.
+10. Build `Nav.tsx`: responsive nav, bottom bar on mobile, top bar on desktop. App header shows the BoxBuddy title and a sign-out button (section 5).
 11. Build offline indicator component, shown when `navigator.onLine` is false.
 12. Seed `rooms` collection with starting rooms, colors, and ranges (section 4.2), or build empty and let Config screen populate it.
 13. Build `Config.tsx`: room manager (add/edit/delete, color picker, range start with auto-suggest and overlap warning), orphaned-photos cleanup (section 6.2/6.5).

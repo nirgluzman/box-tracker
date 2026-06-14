@@ -24,13 +24,14 @@ export default function Login() {
   }
 
   return (
-    <div className="login">
-      <h1>BoxBuddy</h1>
-      <form onSubmit={handleSubmit}>
+    <div className="flex flex-col items-center gap-4 p-12">
+      <h1 className="text-3xl font-bold text-accent">BoxBuddy</h1>
+      <form onSubmit={handleSubmit} className="flex w-full max-w-80 flex-col gap-3">
         <input
           type="email"
           placeholder="Email"
           autoComplete="username"
+          className="field"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
@@ -39,12 +40,17 @@ export default function Login() {
           type="password"
           placeholder="Password"
           autoComplete="current-password"
+          className="field"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
         />
-        {error && <p role="alert" className="error">{error}</p>}
-        <button type="submit" disabled={busy}>
+        {error && (
+          <p role="alert" className="text-sm text-danger">
+            {error}
+          </p>
+        )}
+        <button type="submit" className="btn btn-primary" disabled={busy}>
           {busy ? 'Signing in…' : 'Sign in'}
         </button>
       </form>

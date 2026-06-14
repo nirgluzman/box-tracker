@@ -4,9 +4,9 @@
 // save with max+1 numbering + range-overflow warning, offline mic/photo disable.
 export default function AddBox() {
   return (
-    <section className="screen">
-      <h2>Add Box</h2>
-      <p>Add Box form — not yet implemented.</p>
+    <section className="p-4">
+      <h2 className="mb-2 text-xl font-semibold">Add Box</h2>
+      <p className="text-muted">Add Box form — not yet implemented.</p>
     </section>
   )
 }

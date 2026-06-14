@@ -4,9 +4,9 @@
 // full-dataset CSV export.
 export default function Browse() {
   return (
-    <section className="screen">
-      <h2>Browse</h2>
-      <p>Box list — not yet implemented.</p>
+    <section className="p-4">
+      <h2 className="mb-2 text-xl font-semibold">Browse</h2>
+      <p className="text-muted">Box list — not yet implemented.</p>
     </section>
   )
 }

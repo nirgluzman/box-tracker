@@ -1,11 +1,13 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
     react(),
+    tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'icons/icon-192.png', 'icons/icon-512.png'],
@@ -13,8 +15,8 @@ export default defineConfig({
         name: 'BoxBuddy',
         short_name: 'BoxBuddy',
         description: 'Track packed moving boxes for a household shipment.',
-        theme_color: '#EF9F27',
-        background_color: '#ffffff',
+        theme_color: '#2563eb',
+        background_color: '#0d1420',
         display: 'standalone',
         start_url: '/',
         icons: [
