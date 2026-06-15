@@ -601,7 +601,7 @@ function SwatchGridPicker({
   return (
     <svg
       viewBox={`${-extent} ${-extent} ${vb} ${vb}`}
-      className="mx-auto block w-full max-w-[260px]"
+      className="mx-auto block w-full max-w-65"
       role="group"
       aria-label="Color wheel"
     >
