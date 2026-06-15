@@ -51,10 +51,14 @@ export default function AddBox() {
   const [summarizing, setSummarizing] = useState(false);
   const [removingPath, setRemovingPath] = useState<string | null>(null);
   const [viewer, setViewer] = useState<number | null>(null);
+  // Recognizer language. The Web Speech API handles one language per recording;
+  // switch this to dictate German/English items so they stay in Latin letters
+  // (Hebrew recognition would transliterate them). Recordings append together.
+  const [recLang, setRecLang] = useState('he-IL');
 
   // When dictation ends, summarize the final transcript and append it to the
   // description (don't overwrite) - the user may record in several passes.
-  const speech = useSpeechRecognition('he-IL', (text) => {
+  const speech = useSpeechRecognition(recLang, (text) => {
     setSummarizing(true);
     summarize(text)
       .then((s) => {
@@ -218,20 +222,34 @@ export default function AddBox() {
             Description
             {summarizing && <Spinner className='size-3.5' />}
           </label>
-          <button
-            type='button'
-            className='btn'
-            onClick={toggleMic}
-            disabled={!online || !speech.supported}
-            title={
-              !online
-                ? 'Voice input needs a connection'
-                : !speech.supported
-                  ? 'Voice not supported on this browser'
-                  : undefined
-            }>
-            {speech.listening ? '■ Stop' : '🎤 Speak'}
-          </button>
+          <div className='flex items-center gap-2'>
+            {/* Pick the spoken language so foreign words keep their own script. */}
+            <select
+              className='field py-1.5 text-sm'
+              value={recLang}
+              onChange={(e) => setRecLang(e.target.value)}
+              disabled={speech.listening}
+              aria-label='Voice language'
+              title='Language you will speak in'>
+              <option value='he-IL'>עברית</option>
+              <option value='en-US'>English</option>
+              <option value='de-DE'>Deutsch</option>
+            </select>
+            <button
+              type='button'
+              className='btn'
+              onClick={toggleMic}
+              disabled={!online || !speech.supported}
+              title={
+                !online
+                  ? 'Voice input needs a connection'
+                  : !speech.supported
+                    ? 'Voice not supported on this browser'
+                    : undefined
+              }>
+              {speech.listening ? '■ Stop' : '🎤 Speak'}
+            </button>
+          </div>
         </div>
         {speech.listening && (
           <div className='mb-2 flex items-center gap-3'>
