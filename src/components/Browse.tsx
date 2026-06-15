@@ -2,6 +2,7 @@ import { type ChangeEvent, Fragment, useMemo, useState } from 'react'
 import { useBoxes } from '../hooks/useBoxes'
 import { useRooms } from '../hooks/useRooms'
 import { useOnline } from '../hooks/useOnline'
+import { useIsTouch } from '../hooks/useIsTouch'
 import { addBoxPhoto, boxKey, deleteBox, duplicateKeys, removeBoxPhoto, updateBox } from '../data/boxes'
 import { downloadBoxesCsv } from '../data/csv'
 import { confirmAction } from '../data/confirmPrefs'
@@ -350,6 +351,7 @@ function EditForm({ box, rooms, onDone }: { box: BoxDoc; rooms: RoomDoc[]; onDon
   const [urgent, setUrgent] = useState(box.urgent)
   const [busy, setBusy] = useState(false)
   const online = useOnline()
+  const isTouch = useIsTouch()
   const [uploading, setUploading] = useState(false)
   const [removingUrl, setRemovingUrl] = useState<string | null>(null)
   const [viewer, setViewer] = useState<number | null>(null)
@@ -480,25 +482,28 @@ function EditForm({ box, rooms, onDone }: { box: BoxDoc; rooms: RoomDoc[]; onDon
           </div>
         )}
         <div className="flex flex-wrap items-center gap-2">
-          <label
-            className={`btn inline-flex items-center gap-2 ${!online || uploading ? 'pointer-events-none opacity-50' : ''}`}
-          >
-            {uploading ? (
-              <>
-                <Spinner /> Uploading…
-              </>
-            ) : (
-              '📷 Take photo'
-            )}
-            <input
-              type="file"
-              accept="image/*"
-              capture="environment"
-              className="hidden"
-              onChange={handleAddPhotos}
-              disabled={!online || uploading}
-            />
-          </label>
+          {/* Rear-camera capture: touch devices only (hidden on laptops). */}
+          {isTouch && (
+            <label
+              className={`btn inline-flex items-center gap-2 ${!online || uploading ? 'pointer-events-none opacity-50' : ''}`}
+            >
+              {uploading ? (
+                <>
+                  <Spinner /> Uploading…
+                </>
+              ) : (
+                '📷 Take photo'
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={handleAddPhotos}
+                disabled={!online || uploading}
+              />
+            </label>
+          )}
           <label
             className={`btn inline-flex items-center gap-2 ${!online || uploading ? 'pointer-events-none opacity-50' : ''}`}
           >
