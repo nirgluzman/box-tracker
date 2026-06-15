@@ -1,4 +1,4 @@
-import { arrayRemove, arrayUnion, doc, setDoc } from 'firebase/firestore'
+import { arrayRemove, arrayUnion, doc, setDoc, writeBatch } from 'firebase/firestore'
 import { db } from '../firebase'
 
 // A shared, curated list of colors (settings/palette). Rooms pick their color
@@ -32,4 +32,30 @@ export function removePaletteColor(color: string) {
 // Seed the palette doc with the defaults (offered when it's still untouched).
 export function seedPalette() {
   return setDoc(paletteRef, { colors: DEFAULT_PALETTE }, { merge: true })
+}
+
+// Edit a palette color: swap it in the palette and recolor every room and box
+// currently using it, so the change propagates everywhere (one batch).
+export async function editPaletteColor(
+  oldColor: string,
+  newColor: string,
+  rooms: { id: string; color: string }[],
+  boxes: { id: string; roomColor: string }[],
+): Promise<void> {
+  const oldN = normalizeColor(oldColor)
+  const newN = normalizeColor(newColor)
+  if (oldN === newN) return
+
+  const batch = writeBatch(db)
+  for (const r of rooms) {
+    if (normalizeColor(r.color) === oldN) batch.update(doc(db, 'rooms', r.id), { color: newN })
+  }
+  for (const b of boxes) {
+    if (normalizeColor(b.roomColor) === oldN)
+      batch.update(doc(db, 'boxes', b.id), { roomColor: newN })
+  }
+  await batch.commit()
+
+  await addPaletteColor(newN)
+  await removePaletteColor(oldN)
 }

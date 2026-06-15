@@ -1,7 +1,7 @@
 import { useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import { useRooms } from '../hooks/useRooms'
 import { useBoxes } from '../hooks/useBoxes'
-import type { Room, RoomDoc } from '../types'
+import type { BoxDoc, Room, RoomDoc } from '../types'
 import {
   addRoom,
   deleteRoom,
@@ -23,6 +23,7 @@ import {
 import { deleteOrphanFolder, listOrphanedFolders, type OrphanFolder } from '../data/photos'
 import {
   addPaletteColor,
+  editPaletteColor,
   normalizeColor,
   removePaletteColor,
   seedPalette,
@@ -209,7 +210,7 @@ export default function Config() {
         </button>
       )}
 
-      <PaletteManager colors={palette} />
+      <PaletteManager colors={palette} rooms={rooms} boxes={boxes} />
 
       <div className="mt-6 flex flex-wrap gap-2 border-t border-edge pt-4">
         <button
@@ -481,14 +482,47 @@ function RoomForm({
   )
 }
 
-// Curate the shared color palette that rooms choose from.
-function PaletteManager({ colors }: { colors: string[] }) {
+// Curate the shared color palette that rooms choose from. Tapping a color opens
+// an Edit / Delete menu.
+function PaletteManager({
+  colors,
+  rooms,
+  boxes,
+}: {
+  colors: string[]
+  rooms: RoomDoc[]
+  boxes: BoxDoc[]
+}) {
+  const [menuColor, setMenuColor] = useState<string | null>(null)
+
+  function roomsUsing(color: string) {
+    return rooms.filter((r) => normalizeColor(r.color) === normalizeColor(color))
+  }
+
+  function handleDelete(color: string) {
+    const used = roomsUsing(color)
+    if (used.length > 0) {
+      window.alert(
+        `Can't delete this color - it's assigned to ${used.length} room(s): ` +
+          `${used.map((r) => r.name).join(', ')}. Change those rooms to another color first.`,
+      )
+      return
+    }
+    if (!window.confirm('Delete this color from the palette?')) return
+    removePaletteColor(color)
+    setMenuColor(null)
+  }
+
+  async function handleEdit(oldColor: string, newColor: string) {
+    await editPaletteColor(oldColor, newColor, rooms, boxes)
+    setMenuColor(null)
+  }
+
   return (
     <section className="mt-6 border-t border-edge pt-4">
       <h3 className="mb-1 font-semibold">Box colors</h3>
       <p className="mb-3 text-sm text-muted">
-        Curate the colors rooms can choose from. Removing a color here doesn’t change rooms
-        already using it.
+        Curate the colors rooms can choose from. Tap a color to edit or delete it.
       </p>
 
       {colors.length === 0 ? (
@@ -502,21 +536,14 @@ function PaletteManager({ colors }: { colors: string[] }) {
       ) : (
         <div className="mb-3 flex flex-wrap gap-2.5">
           {colors.map((c) => (
-            <div key={c} className="relative">
-              <span
-                className="block size-9 rounded-full border border-white/20"
-                style={{ background: c }}
-                aria-label={c}
-              />
-              <button
-                type="button"
-                onClick={() => removePaletteColor(c)}
-                aria-label={`Remove ${c}`}
-                className="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-danger text-xs text-white"
-              >
-                ×
-              </button>
-            </div>
+            <button
+              key={c}
+              type="button"
+              onClick={() => setMenuColor(c)}
+              aria-label={`Edit or delete ${c}`}
+              className="size-9 rounded-full border border-white/20"
+              style={{ background: c }}
+            />
           ))}
         </div>
       )}
@@ -530,6 +557,46 @@ function PaletteManager({ colors }: { colors: string[] }) {
           onChange={(e) => addPaletteColor(e.target.value)}
         />
       </label>
+
+      {menuColor && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setMenuColor(null)}
+        >
+          <div
+            className="w-full max-w-xs rounded-lg border border-edge bg-surface p-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex items-center gap-2">
+              <span
+                className="size-6 rounded-full border border-white/20"
+                style={{ background: menuColor }}
+              />
+              <span className="font-semibold">Color</span>
+            </div>
+            <div className="flex flex-col gap-2">
+              {/* Edit: pick a new color; recolors all rooms/boxes using this one. */}
+              <label className="btn cursor-pointer">
+                Edit color
+                <input
+                  type="color"
+                  className="sr-only"
+                  defaultValue={menuColor}
+                  onChange={(e) => handleEdit(menuColor, e.target.value)}
+                />
+              </label>
+              <button type="button" className="btn" onClick={() => handleDelete(menuColor)}>
+                Delete color
+              </button>
+              <button type="button" className="btn" onClick={() => setMenuColor(null)}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   )
 }
