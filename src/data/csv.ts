@@ -1,6 +1,6 @@
 import type { Box, BoxDoc } from '../types'
 
-// CSV export per SPEC 8.1. Always called with the FULL boxes collection —
+// CSV export per SPEC 8.1. Always called with the FULL boxes collection -
 // import infers deletions from absent rows, so a filtered export would wrongly
 // delete the filtered-out boxes.
 const COLUMNS = [
@@ -141,11 +141,11 @@ export interface ImportPlan {
   }[]
   creates: Omit<Box, 'createdAt'>[]
   deletes: BoxDoc[]
-  highDeletion: boolean // file looks partial — needs extra confirmation
+  highDeletion: boolean // file looks partial - needs extra confirmation
 }
 
 // Pure diff between the uploaded file and current boxes (SPEC 8.2). Existing ids
-// absent from the file are deletions — safe only because export is full dataset.
+// absent from the file are deletions - safe only because export is full dataset.
 export function planImport(
   records: ImportRecord[],
   boxes: BoxDoc[],

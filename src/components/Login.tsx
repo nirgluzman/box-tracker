@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { signInWithEmailAndPassword } from 'firebase/auth'
 import { auth } from '../firebase'
 
-// SPEC 6.1 — email/password sign-in, disabled Google button, inline errors.
+// SPEC 6.1 - email/password sign-in, disabled Google button, inline errors.
 export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')

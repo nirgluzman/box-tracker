@@ -1,4 +1,4 @@
-// SPEC 6 / 9 — responsive nav. Bottom tab bar < 768px, top bar >= 768px (CSS).
+// SPEC 6 / 9 - responsive nav. Bottom tab bar < 768px, top bar >= 768px (CSS).
 export type Screen = 'add' | 'browse' | 'unpack' | 'config'
 
 const TABS: { id: Screen; label: string }[] = [
@@ -16,7 +16,7 @@ export default function Nav({
   onChange: (s: Screen) => void
 }) {
   return (
-    <nav className="fixed inset-x-0 bottom-0 flex border-t border-edge bg-surface md:static md:border-t-0 md:border-b">
+    <nav className="fixed inset-x-0 bottom-0 z-20 flex shrink-0 border-t border-edge bg-surface md:static md:border-t-0 md:border-b">
       {TABS.map((t) => {
         const isActive = active === t.id
         return (

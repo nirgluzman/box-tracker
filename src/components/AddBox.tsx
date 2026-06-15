@@ -11,7 +11,7 @@ import { deletePhotoPaths, uploadBoxPhoto, type UploadedPhoto } from '../data/ph
 import { Spinner } from './Spinner';
 import type { RoomDoc } from '../types';
 
-// SPEC 6.2 — Add Box.
+// SPEC 6.2 - Add Box.
 export default function AddBox() {
   const { rooms } = useRooms();
   const { boxes } = useBoxes();
@@ -114,11 +114,11 @@ export default function AddBox() {
       });
       savedRef.current = true; // photos now belong to a saved box
 
-      let message = `Saved as Box #${boxNumber} (${room.name}) — write this on the box.`;
+      let message = `Saved as Box #${boxNumber} (${room.name}) - write this on the box.`;
       if (isRangeOverflow(boxNumber, room.rangeStart)) {
-        message += ` Box #${boxNumber} exceeds the ${room.name} range (${room.rangeStart}–${rangeEnd(
+        message += ` Box #${boxNumber} exceeds the ${room.name} range (${room.rangeStart}-${rangeEnd(
           room.rangeStart
-        )}) — consider widening the range in Config.`;
+        )}) - consider widening the range in Config.`;
       }
       setConfirmation(message);
       resetForm();
@@ -141,7 +141,7 @@ export default function AddBox() {
       <fieldset className='mb-4'>
         <legend className='mb-2 text-sm text-muted'>Room</legend>
         {rooms.length === 0 ? (
-          <p className='text-sm text-muted'>No rooms yet — add rooms in Config first.</p>
+          <p className='text-sm text-muted'>No rooms yet - add rooms in Config first.</p>
         ) : (
           <div className='flex flex-wrap gap-2'>
             {rooms.map((r) => {
@@ -176,7 +176,7 @@ export default function AddBox() {
           className='field w-full'
           value={packingNumber}
           onChange={(e) => setPackingNumber(e.target.value)}
-          placeholder="Optional — the number on the company's label"
+          placeholder="Optional - the number on the company's label"
         />
       </div>
 
@@ -222,7 +222,7 @@ export default function AddBox() {
       <div className='mb-4'>
         <div className='mb-2 flex flex-wrap items-center gap-3'>
           {/* Take photo: capture='environment' opens the rear camera. No `multiple`
-              here — browsers ignore `capture` when `multiple` is also set. */}
+              here - browsers ignore `capture` when `multiple` is also set. */}
           <label
             className={`btn inline-flex items-center gap-2 ${!online || uploading ? 'pointer-events-none opacity-50' : ''}`}>
             {uploading ? (

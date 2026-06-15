@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 // Wraps the Web Speech API for live dictation (SPEC 7). Android Chrome only;
 // language is set explicitly to he-IL (there is no "auto").
-// onFinal fires once when dictation ends, with the final transcript — callers
+// onFinal fires once when dictation ends, with the final transcript - callers
 // use it to trigger summarization as an event rather than a render effect.
 export function useSpeechRecognition(lang = 'he-IL', onFinal?: (text: string) => void) {
   const Ctor = window.SpeechRecognition ?? window.webkitSpeechRecognition

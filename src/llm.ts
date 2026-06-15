@@ -1,17 +1,17 @@
-// LLM summarization (SPEC 7) — Groq (OpenAI-compatible) chat completions.
+// LLM summarization (SPEC 7) - Groq (OpenAI-compatible) chat completions.
 // Falls back to the raw transcript on missing key / HTTP error / network
 // failure, so voice input never blocks saving (passthrough philosophy).
 const KEY = import.meta.env.VITE_LLM_API_KEY as string | undefined
 const MODEL = 'llama-3.3-70b-versatile'
 const ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions'
 
-// Extract just the box's contents as a tight item list — the spoken transcript
+// Extract just the box's contents as a tight item list - the spoken transcript
 // often has filler, repetition, and background chatter we don't want on the label.
 const SYSTEM_PROMPT =
   "You label moving boxes. From the spoken transcript of one box's contents, extract a " +
   'concise, comma-separated list of the physical items only. Keep the original language; ' +
   'do not translate. Remove filler words, repetitions, hesitations, side comments, and any ' +
-  'background talk or anything that is not an item being packed. Output ONLY the list — no ' +
+  'background talk or anything that is not an item being packed. Output ONLY the list - no ' +
   'introduction, no explanation, no quotes, no trailing punctuation. If no items can be ' +
   'identified, return the transcript with filler removed.'
 

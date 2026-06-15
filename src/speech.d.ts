@@ -1,4 +1,4 @@
-// Minimal Web Speech API typings — TypeScript's lib.dom does not ship these.
+// Minimal Web Speech API typings - TypeScript's lib.dom does not ship these.
 // Android Chrome exposes the API as `webkitSpeechRecognition` (SPEC 7).
 interface SpeechRecognitionAlternative {
   readonly transcript: string

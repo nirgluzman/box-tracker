@@ -9,7 +9,7 @@ import { PhotoThumbs } from './PhotoThumbs'
 import { PencilIcon, TrashIcon } from './icons'
 import type { BoxDoc, RoomDoc } from '../types'
 
-// SPEC 6.3 — Browse. Real-time list, filters, responsive cards/table,
+// SPEC 6.3 - Browse. Real-time list, filters, responsive cards/table,
 // edit/delete, duplicate-number badge, full-dataset CSV export.
 export default function Browse() {
   const { boxes, loading } = useBoxes()
@@ -88,7 +88,7 @@ export default function Browse() {
         </button>
       </div>
 
-      {/* Filters (SPEC 6.3) — select one or more rooms; none = all. */}
+      {/* Filters (SPEC 6.3) - select one or more rooms; none = all. */}
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <button
           type="button"
@@ -371,7 +371,7 @@ function EditForm({ box, rooms, onDone }: { box: BoxDoc; rooms: RoomDoc[]; onDon
     }
   }
 
-  // Photos persist immediately (SPEC 13) — independent of the Save button. The
+  // Photos persist immediately (SPEC 13) - independent of the Save button. The
   // live snapshot feeds box.photoUrls back in, so the grid updates on its own.
   async function handleAddPhotos(e: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? [])
@@ -440,7 +440,7 @@ function EditForm({ box, rooms, onDone }: { box: BoxDoc; rooms: RoomDoc[]; onDon
         Urgent
       </label>
 
-      {/* Photos — add/remove later (SPEC 13). Persist immediately. */}
+      {/* Photos - add/remove later (SPEC 13). Persist immediately. */}
       <div>
         <span className="mb-1 block text-sm text-muted">Photos</span>
         {box.photoUrls.length > 0 && (

@@ -26,7 +26,7 @@ function OfflineBanner() {
       className="bg-accent py-2 text-center text-sm font-semibold text-on-accent"
       role="status"
     >
-      Offline — changes will sync when reconnected
+      Offline - changes will sync when reconnected
     </div>
   )
 }
@@ -47,9 +47,9 @@ export default function App() {
   if (!user) return <Login />
 
   return (
-    <div className="min-h-screen pb-16 md:pb-0">
+    <div className="flex h-dvh flex-col">
       <OfflineBanner />
-      <header className="flex items-center justify-between gap-3 border-b border-edge bg-surface px-4 py-2.5">
+      <header className="flex shrink-0 items-center justify-between gap-3 border-b border-edge bg-surface px-4 py-2.5">
         <span className="text-lg font-bold text-accent">BoxBuddy</span>
         <div className="flex items-center gap-3">
           <span className="max-w-[55vw] truncate text-sm text-muted" title={user.email ?? undefined}>
@@ -60,10 +60,10 @@ export default function App() {
           </button>
         </div>
       </header>
-      {/* Rendered before <main>: a top bar on desktop (md:static), and pinned
-          to the bottom on mobile via position:fixed (DOM order irrelevant). */}
+      {/* Top bar on desktop (in-flow, fixed height); pinned to the bottom on
+          mobile via position:fixed. Only <main> scrolls. */}
       <Nav active={screen} onChange={setScreen} />
-      <main>
+      <main className="flex-1 overflow-y-auto pb-16 md:pb-0">
         {screen === 'add' && <AddBox />}
         {screen === 'browse' && <Browse />}
         {screen === 'unpack' && <Unpack />}

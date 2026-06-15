@@ -45,7 +45,7 @@ export function updateBox(id: string, patch: Partial<Omit<Box, 'createdAt'>>) {
   return updateDoc(doc(db, 'boxes', id), patch)
 }
 
-// Add a photo to an existing box (SPEC 13 — photos added later via Edit). Uploads
+// Add a photo to an existing box (SPEC 13 - photos added later via Edit). Uploads
 // to boxPhotos/{id}/ then appends the URL. Needs a connection (upload can't queue).
 export async function addBoxPhoto(boxId: string, file: File): Promise<void> {
   const { url } = await uploadBoxPhoto(boxId, file)
@@ -81,7 +81,7 @@ export function boxKey(box: BoxDoc): string {
 }
 
 // Apply a CSV import diff (SPEC 8.2) in one batch, then remove Storage photos
-// for deleted boxes. (writeBatch caps at 500 ops — fine for this app's size.)
+// for deleted boxes. (writeBatch caps at 500 ops - fine for this app's size.)
 export async function applyImportPlan(plan: ImportPlan): Promise<void> {
   const batch = writeBatch(db)
   for (const u of plan.updates) batch.update(doc(db, 'boxes', u.id), u.patch)

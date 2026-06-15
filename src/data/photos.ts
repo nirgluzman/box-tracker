@@ -46,7 +46,7 @@ export async function deletePhotoPaths(paths: string[]): Promise<void> {
   await Promise.all(paths.map((p) => deleteObject(ref(storage, p)).catch(() => {})))
 }
 
-// Best-effort delete by download URL — ref() accepts a same-bucket https URL.
+// Best-effort delete by download URL - ref() accepts a same-bucket https URL.
 // Used when deleting a box, whose photoUrls are stored as download URLs (SPEC 6.3).
 export async function deletePhotoUrls(urls: string[]): Promise<void> {
   await Promise.all(urls.map((u) => deleteObject(ref(storage, u)).catch(() => {})))

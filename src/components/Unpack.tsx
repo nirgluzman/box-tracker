@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useBoxes } from '../hooks/useBoxes'
 import { PhotoThumbs } from './PhotoThumbs'
 
-// SPEC 6.4 — Unpack. Search by BoxBuddy number or the packing company's number;
+// SPEC 6.4 - Unpack. Search by BoxBuddy number or the packing company's number;
 // show all matches (a number can repeat across rooms, SPEC 4.3); "Box not found"
 // on no match.
 export default function Unpack() {
@@ -70,7 +70,7 @@ export default function Unpack() {
 
       {searched && matches.length > 1 && (
         <p className="mt-3 text-xs text-muted">
-          {matches.length} boxes match “{trimmed}” — check the room to find the right one.
+          {matches.length} boxes match “{trimmed}” - check the room to find the right one.
         </p>
       )}
     </section>

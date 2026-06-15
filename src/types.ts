@@ -1,6 +1,6 @@
 import type { Timestamp } from 'firebase/firestore'
 
-// boxes collection — SPEC 4.1
+// boxes collection - SPEC 4.1
 export interface Box {
   boxNumber: number
   packingNumber?: string // optional sequential label from the packing company, for identification
@@ -18,7 +18,7 @@ export interface BoxDoc extends Box {
   id: string
 }
 
-// rooms collection — SPEC 4.2
+// rooms collection - SPEC 4.2
 export interface Room {
   name: string
   color: string // hex, e.g. "#EF9F27"

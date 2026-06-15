@@ -17,7 +17,7 @@ export function updateRoom(id: string, patch: Partial<Room>) {
   return updateDoc(doc(db, 'rooms', id), patch)
 }
 
-// Deleting a room leaves its boxes untouched — they keep their stored room
+// Deleting a room leaves its boxes untouched - they keep their stored room
 // name, color, and numbers (SPEC 6.5).
 export function deleteRoom(id: string) {
   return deleteDoc(doc(db, 'rooms', id))
@@ -73,7 +73,7 @@ export function overlappingRoom(
   })
 }
 
-// Box numbers already in use that fall inside the candidate range — including
+// Box numbers already in use that fall inside the candidate range - including
 // boxes whose room was since deleted (SPEC 6.5). `boxNumbers` is every box's
 // number across the whole collection.
 export function inUseNumbersInRange(candidateStart: number, boxNumbers: number[]): number[] {

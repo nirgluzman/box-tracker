@@ -32,7 +32,7 @@ import { usePalette } from '../hooks/usePalette'
 import { Spinner } from './Spinner'
 import { PencilIcon, TrashIcon } from './icons'
 
-// SPEC 6.5 — Config / room manager + CSV download/upload (SPEC 8) + orphaned-photos cleanup (SPEC 6.2).
+// SPEC 6.5 - Config / room manager + CSV download/upload (SPEC 8) + orphaned-photos cleanup (SPEC 6.2).
 export default function Config() {
   const { rooms, loading } = useRooms()
   const { boxes } = useBoxes()
@@ -77,7 +77,7 @@ export default function Config() {
     }
   }
 
-  // Orphaned-photos cleanup (SPEC 6.2/6.5) — requires a connection.
+  // Orphaned-photos cleanup (SPEC 6.2/6.5) - requires a connection.
   const [scanning, setScanning] = useState(false)
   const [orphans, setOrphans] = useState<OrphanFolder[] | null>(null)
   const [orphanError, setOrphanError] = useState<string | null>(null)
@@ -166,7 +166,7 @@ export default function Config() {
               />
               <span className="flex-1 font-semibold">{room.name}</span>
               <span className="text-muted tabular-nums">
-                {room.rangeStart}–{rangeEnd(room.rangeStart)}
+                {room.rangeStart}-{rangeEnd(room.rangeStart)}
               </span>
               <button
                 type="button"
@@ -315,7 +315,7 @@ export default function Config() {
                 checked={ackDeletion}
                 onChange={(e) => setAckDeletion(e.target.checked)}
               />
-              This file deletes {plan.deletes.length} of {boxes.length} boxes — it may be a
+              This file deletes {plan.deletes.length} of {boxes.length} boxes - it may be a
               partial export. I understand and want to proceed.
             </label>
           )}
@@ -411,7 +411,7 @@ function RoomForm({
       <div>
         <span className="mb-1 block text-sm text-muted">Color</span>
         {swatches.length === 0 ? (
-          <p className="text-sm text-warn">No colors in the palette — add some under “Box colors”.</p>
+          <p className="text-sm text-warn">No colors in the palette - add some under “Box colors”.</p>
         ) : (
           <div className="flex flex-wrap gap-2">
             {swatches.map((c) => {
@@ -443,13 +443,13 @@ function RoomForm({
           onChange={(e) => setRangeStart(Number(e.target.value))}
         />
         <span className="text-muted tabular-nums">
-          {rangeStart}–{rangeEnd(rangeStart)}
+          {rangeStart}-{rangeEnd(rangeStart)}
         </span>
       </label>
 
       {overlap && (
         <p className="text-sm text-warn" role="alert">
-          Overlaps “{overlap.name}” ({overlap.rangeStart}–{rangeEnd(overlap.rangeStart)}).
+          Overlaps “{overlap.name}” ({overlap.rangeStart}-{rangeEnd(overlap.rangeStart)}).
         </p>
       )}
       {usedNumbers.length > 0 && (
@@ -495,7 +495,7 @@ function PaletteManager({ colors }: { colors: string[] }) {
 
       {colors.length === 0 ? (
         <p className="mb-3 text-sm text-warn">
-          No colors yet — add one below or{' '}
+          No colors yet - add one below or{' '}
           <button type="button" className="underline" onClick={() => seedPalette()}>
             load the defaults
           </button>
