@@ -1,4 +1,4 @@
-import { useRef, useState, type ChangeEvent, type FormEvent } from 'react'
+import { useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import { useRooms } from '../hooks/useRooms'
 import { useBoxes } from '../hooks/useBoxes'
 import type { BoxDoc, Room, RoomDoc } from '../types'
@@ -32,6 +32,7 @@ import { confirmAction, CONFIRM_LABELS, type ConfirmKey } from '../data/confirmP
 import { useOnline } from '../hooks/useOnline'
 import { usePalette } from '../hooks/usePalette'
 import { useConfirmPrefs } from '../hooks/useConfirmPrefs'
+import { useBackDismiss } from '../hooks/useBackDismiss'
 import { Spinner } from './Spinner'
 import { PencilIcon, TrashIcon } from './icons'
 
@@ -516,25 +517,60 @@ function RoomForm({
   )
 }
 
-// Discrete color swatches for the palette picker - a curated grid (10 hue
-// families x 6 shades + grays) so users tap a color instead of fiddling with a
-// Hue/Saturation/Value picker. A hex field covers the rare fully-custom color.
-const PRESET_SWATCHES = [
-  '#fee2e2', '#fca5a5', '#ef4444', '#dc2626', '#991b1b', '#7f1d1d',
-  '#ffedd5', '#fdba74', '#f97316', '#ea580c', '#c2410c', '#7c2d12',
-  '#fef3c7', '#fcd34d', '#f59e0b', '#d97706', '#b45309', '#78350f',
-  '#dcfce7', '#86efac', '#22c55e', '#16a34a', '#15803d', '#14532d',
-  '#ccfbf1', '#5eead4', '#14b8a6', '#0d9488', '#0f766e', '#134e4a',
-  '#dbeafe', '#93c5fd', '#3b82f6', '#2563eb', '#1d4ed8', '#1e3a8a',
-  '#e0e7ff', '#a5b4fc', '#6366f1', '#4f46e5', '#4338ca', '#312e81',
-  '#f3e8ff', '#d8b4fe', '#a855f7', '#9333ea', '#7e22ce', '#581c87',
-  '#fce7f3', '#f9a8d4', '#ec4899', '#db2777', '#be185d', '#831843',
-  '#ffffff', '#d1d5db', '#9ca3af', '#6b7280', '#374151', '#111827',
-]
+// HSL -> hex. h in [0,360), s/l in [0,1].
+function hslToHex(h: number, s: number, l: number): string {
+  const a = s * Math.min(l, 1 - l)
+  const f = (n: number) => {
+    const k = (n + h / 30) % 12
+    const c = l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1))
+    return Math.round(255 * c)
+      .toString(16)
+      .padStart(2, '0')
+  }
+  return `#${f(0)}${f(8)}${f(4)}`
+}
 
-const isHex = (s: string) => /^#?[0-9a-fA-F]{6}$/.test(s.trim())
+type HexCell = { x: number; y: number; color: string }
 
-// Swatch-grid color picker: tap a preset, or type a hex for a custom color.
+// Build a hexagon-shaped honeycomb of pointy-top hex cells (axial coords). Hue
+// is the angle around the center, saturation grows with distance, lightness
+// fades to white at the center - a full-spectrum color wheel.
+function buildHoneycomb(rings: number, R: number): HexCell[] {
+  const raw: { x: number; y: number; dist: number }[] = []
+  let maxDist = 0
+  for (let q = -rings; q <= rings; q++) {
+    for (let r = -rings; r <= rings; r++) {
+      if (Math.max(Math.abs(q), Math.abs(r), Math.abs(q + r)) > rings) continue
+      const x = Math.sqrt(3) * R * (q + r / 2)
+      const y = 1.5 * R * r
+      const dist = Math.hypot(x, y)
+      maxDist = Math.max(maxDist, dist)
+      raw.push({ x, y, dist })
+    }
+  }
+  return raw.map(({ x, y, dist }) => {
+    const norm = maxDist === 0 ? 0 : dist / maxDist
+    let angle = (Math.atan2(y, x) * 180) / Math.PI
+    if (angle < 0) angle += 360
+    const color = norm < 0.001 ? '#ffffff' : hslToHex(angle, 1, 1 - 0.5 * norm)
+    return { x, y, color }
+  })
+}
+
+// Pointy-top hexagon vertices around (cx, cy) with circumradius R.
+function hexPoints(cx: number, cy: number, R: number): string {
+  const pts = []
+  for (let i = 0; i < 6; i++) {
+    const a = ((60 * i - 90) * Math.PI) / 180
+    pts.push(`${(cx + R * Math.cos(a)).toFixed(2)},${(cy + R * Math.sin(a)).toFixed(2)}`)
+  }
+  return pts.join(' ')
+}
+
+const HONEYCOMB_R = 13
+const HONEYCOMB_RINGS = 7
+
+// Honeycomb color-wheel picker: tap a hex cell to choose its color.
 function SwatchGridPicker({
   value,
   onPick,
@@ -542,45 +578,35 @@ function SwatchGridPicker({
   value?: string
   onPick: (hex: string) => void
 }) {
-  const [custom, setCustom] = useState(value ?? '')
   const selected = value ? normalizeColor(value) : ''
+  const cells = useMemo(() => buildHoneycomb(HONEYCOMB_RINGS, HONEYCOMB_R), [])
+  const extent = (HONEYCOMB_RINGS + 1) * Math.sqrt(3) * HONEYCOMB_R
+  const vb = extent * 2
+
   return (
-    <div>
-      <div className="grid grid-cols-6 gap-1.5">
-        {PRESET_SWATCHES.map((c) => (
-          <button
-            key={c}
-            type="button"
-            onClick={() => onPick(c)}
-            aria-label={c}
-            className={`size-8 rounded-md ${
-              normalizeColor(c) === selected
-                ? 'ring-2 ring-accent ring-offset-1 ring-offset-surface'
-                : 'border border-white/20'
-            }`}
-            style={{ background: c }}
-          />
-        ))}
-      </div>
-      <div className="mt-3 flex items-center gap-2">
-        <input
-          type="text"
-          className="field flex-1"
-          value={custom}
-          onChange={(e) => setCustom(e.target.value)}
-          placeholder="#RRGGBB (custom)"
-          aria-label="Custom hex color"
-        />
-        <button
-          type="button"
-          className="btn"
-          disabled={!isHex(custom)}
-          onClick={() => onPick(custom.trim().startsWith('#') ? custom.trim() : `#${custom.trim()}`)}
-        >
-          Use
-        </button>
-      </div>
-    </div>
+    <svg
+      viewBox={`${-extent} ${-extent} ${vb} ${vb}`}
+      className="mx-auto block w-full max-w-[260px]"
+      role="group"
+      aria-label="Color wheel"
+    >
+      {cells.map((c) => {
+        const isSel = normalizeColor(c.color) === selected
+        return (
+          <polygon
+            key={`${c.x},${c.y}`}
+            points={hexPoints(c.x, c.y, HONEYCOMB_R)}
+            fill={c.color}
+            stroke={isSel ? '#fff' : c.color}
+            strokeWidth={isSel ? 2.5 : 0.5}
+            className="cursor-pointer"
+            onClick={() => onPick(c.color)}
+          >
+            <title>{c.color}</title>
+          </polygon>
+        )
+      })}
+    </svg>
   )
 }
 
@@ -597,6 +623,10 @@ function PaletteManager({
 }) {
   const [menuColor, setMenuColor] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
+
+  // Back button closes whichever color dialog is open instead of leaving Config.
+  useBackDismiss(adding, () => setAdding(false))
+  useBackDismiss(menuColor !== null, () => setMenuColor(null))
 
   function roomsUsing(color: string) {
     return rooms.filter((r) => normalizeColor(r.color) === normalizeColor(color))

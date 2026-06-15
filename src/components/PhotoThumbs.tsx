@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import { useBackDismiss } from '../hooks/useBackDismiss'
 
 // Clickable photo thumbnails that open a full-screen, pinch-to-zoom viewer.
 export function PhotoThumbs({ urls, size = 'size-16' }: { urls: string[]; size?: string }) {
@@ -44,6 +45,9 @@ export function Lightbox({
   const pointers = useRef(new Map<number, { x: number; y: number }>())
   const pinchStart = useRef<{ dist: number; scale: number } | null>(null)
   const lastTap = useRef(0)
+
+  // Android back button closes the viewer instead of changing screens.
+  useBackDismiss(true, onClose)
 
   const apply = () => {
     const el = imgRef.current
