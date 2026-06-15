@@ -637,14 +637,14 @@ function PaletteManager({
           .
         </p>
       ) : (
-        <div className="mb-3 flex flex-wrap gap-2.5">
+        <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
           {colors.map((c) => (
             <button
               key={c}
               type="button"
               onClick={() => setMenuColor(c)}
               aria-label={`Edit or delete ${c}`}
-              className="size-9 rounded-full border border-white/20"
+              className="size-8 shrink-0 rounded-md border border-white/20"
               style={{ background: c }}
             />
           ))}
