@@ -6,11 +6,37 @@ export interface UploadedPhoto {
   path: string // Storage path, tracked so orphaned uploads can be deleted
 }
 
-// Upload one photo under boxPhotos/{docId}/ (SPEC 6.2).
+// Downscale + re-encode a photo before upload. Phone-camera shots are several
+// MB, which stalls uploads on mobile; this brings them to a few hundred KB.
+// Respects EXIF orientation. Falls back to the original on any failure.
+async function compressImage(file: File, maxDim = 1600, quality = 0.8): Promise<Blob> {
+  if (!file.type.startsWith('image/')) return file
+  try {
+    const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' })
+    const scale = Math.min(1, maxDim / Math.max(bitmap.width, bitmap.height))
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.round(bitmap.width * scale)
+    canvas.height = Math.round(bitmap.height * scale)
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return file
+    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
+    bitmap.close()
+    const blob = await new Promise<Blob | null>((res) =>
+      canvas.toBlob(res, 'image/jpeg', quality),
+    )
+    return blob ?? file
+  } catch {
+    return file
+  }
+}
+
+// Upload one photo under boxPhotos/{docId}/ (SPEC 6.2). Compresses first.
 export async function uploadBoxPhoto(docId: string, file: File): Promise<UploadedPhoto> {
-  const path = `boxPhotos/${docId}/${Date.now()}_${file.name}`
+  const blob = await compressImage(file)
+  const ext = blob.type === 'image/jpeg' ? 'jpg' : (file.name.split('.').pop() ?? 'jpg')
+  const path = `boxPhotos/${docId}/${Date.now()}.${ext}`
   const fileRef = ref(storage, path)
-  await uploadBytes(fileRef, file)
+  await uploadBytes(fileRef, blob, { contentType: blob.type || 'image/jpeg' })
   const url = await getDownloadURL(fileRef)
   return { url, path }
 }
