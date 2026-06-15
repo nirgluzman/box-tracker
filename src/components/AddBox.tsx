@@ -264,12 +264,11 @@ export default function AddBox() {
             {micErrorMessage(speech.error)}
           </p>
         )}
-        {/* Starts at ~2 lines and grows with content (field-sizing), capped so
-            it never pushes the form off a phone screen - then scrolls. */}
+        {/* Two lines by default; drag the bottom-right handle to enlarge. */}
         <textarea
           id='desc'
           rows={2}
-          className='field w-full resize-none field-sizing-content max-h-32'
+          className='field w-full resize-y'
           value={summarizing ? 'Summarizing…' : description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder='Type, or use the mic'
