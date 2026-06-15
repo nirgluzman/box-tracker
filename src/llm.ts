@@ -12,7 +12,8 @@ const SYSTEM_PROMPT =
   'concise, comma-separated list of the physical items only, in Hebrew. If the transcript is ' +
   'in English or German, translate the items into Hebrew. But keep individual English or ' +
   'German words that are normally used as-is in Hebrew - brand names, proper nouns, model ' +
-  'names, and common loanwords - in their original form; do not force-translate those. ' +
+  'names, and common loanwords - in their original form, written in their original Latin ' +
+  'letters; do not translate those and do not transliterate them into Hebrew characters. ' +
   'Remove filler words, repetitions, hesitations, side comments, and any background talk or ' +
   'anything that is not an item being packed. Output ONLY the list - no introduction, no ' +
   'explanation, no quotes, no trailing punctuation. If no items can be identified, return the ' +
