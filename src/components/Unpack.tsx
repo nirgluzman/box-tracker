@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useBoxes } from '../hooks/useBoxes'
+import { PhotoThumbs } from './PhotoThumbs'
 
 // SPEC 6.4 — Unpack. Search by BoxBuddy number or the packing company's number;
 // show all matches (a number can repeat across rooms, SPEC 4.3); "Box not found"
@@ -62,18 +63,7 @@ export default function Unpack() {
               )}
             </div>
             {box.description && <p className="mb-2 text-sm">{box.description}</p>}
-            {box.photoUrls.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {box.photoUrls.map((url) => (
-                  <img
-                    key={url}
-                    src={url}
-                    alt=""
-                    className="size-24 rounded border border-edge object-cover"
-                  />
-                ))}
-              </div>
-            )}
+            <PhotoThumbs urls={box.photoUrls} size="size-24" />
           </div>
         ))}
       </div>

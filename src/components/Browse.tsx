@@ -4,6 +4,7 @@ import { useRooms } from '../hooks/useRooms'
 import { boxKey, deleteBox, duplicateKeys, updateBox } from '../data/boxes'
 import { downloadBoxesCsv } from '../data/csv'
 import { Spinner } from './Spinner'
+import { PhotoThumbs } from './PhotoThumbs'
 import type { BoxDoc, RoomDoc } from '../types'
 
 // SPEC 6.3 — Browse. Real-time list, filters, responsive cards/table,
@@ -220,15 +221,8 @@ function BoxCard({
       </div>
       {box.description && <p className="mb-2 text-sm">{box.description}</p>}
       {box.photoUrls.length > 0 && (
-        <div className="mb-2 flex flex-wrap gap-2">
-          {box.photoUrls.map((url) => (
-            <img
-              key={url}
-              src={url}
-              alt=""
-              className="size-16 rounded border border-edge object-cover"
-            />
-          ))}
+        <div className="mb-2">
+          <PhotoThumbs urls={box.photoUrls} />
         </div>
       )}
       <p className="mb-2 text-xs text-muted">Added by {box.addedBy}</p>
