@@ -215,92 +215,37 @@ export default function Config() {
 
       <PaletteManager colors={palette} rooms={rooms} boxes={boxes} />
 
-      <div className="mt-6 flex flex-wrap gap-2 border-t border-edge pt-4">
-        <button
-          type="button"
-          className="btn"
-          onClick={() => downloadBoxesCsv(boxes)}
-          disabled={boxes.length === 0}
-        >
-          Download CSV
-        </button>
-        <button type="button" className="btn" onClick={() => fileRef.current?.click()}>
-          Upload CSV
-        </button>
-        <input
-          ref={fileRef}
-          type="file"
-          accept=".csv,text/csv"
-          className="hidden"
-          onChange={handleFile}
-        />
-        <button
-          type="button"
-          className="btn"
-          onClick={scanOrphans}
-          disabled={scanning || !online}
-          title={online ? 'Scan for photos with no box' : 'Requires a connection'}
-        >
-          {scanning ? (
-            <span className="inline-flex items-center gap-2">
-              <Spinner /> Scanning…
-            </span>
-          ) : (
-            'Orphaned photos'
-          )}
-        </button>
+      <div className="mt-6 border-t border-edge pt-4">
+        <div className="mx-auto flex max-w-sm gap-3">
+          <button
+            type="button"
+            className="btn flex-1 justify-center"
+            onClick={() => downloadBoxesCsv(boxes)}
+            disabled={boxes.length === 0}
+          >
+            Download CSV
+          </button>
+          <button
+            type="button"
+            className="btn flex-1 justify-center"
+            onClick={() => fileRef.current?.click()}
+          >
+            Upload CSV
+          </button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".csv,text/csv"
+            className="hidden"
+            onChange={handleFile}
+          />
+        </div>
       </div>
 
       {importError && (
         <p className="mt-3 text-sm text-danger" role="alert">
           {importError}
         </p>
-      )}
-
-      {orphanError && (
-        <p className="mt-3 text-sm text-danger" role="alert">
-          {orphanError}
-        </p>
-      )}
-
-      {orphans && (
-        <div className="mt-4 rounded-lg border border-edge bg-surface p-3">
-          <h3 className="mb-2 font-semibold">Orphaned photos</h3>
-          {orphans.length === 0 ? (
-            <p className="text-sm text-muted">No orphaned photo folders found.</p>
-          ) : (
-            <ul className="list-none p-0">
-              {orphans.map((o) => (
-                <li
-                  key={o.docId}
-                  className="flex items-center gap-2.5 border-b border-edge py-2"
-                >
-                  {o.thumbUrl ? (
-                    <img
-                      src={o.thumbUrl}
-                      alt=""
-                      className="size-10 shrink-0 rounded object-cover"
-                    />
-                  ) : (
-                    <span className="size-10 shrink-0 rounded bg-edge" aria-hidden="true" />
-                  )}
-                  <span className="flex-1 text-sm">
-                    {o.count} photo{o.count === 1 ? '' : 's'}
-                    <span className="block text-xs text-muted">{o.docId}</span>
-                  </span>
-                  <button
-                    type="button"
-                    className="btn"
-                    onClick={() => removeOrphan(o.docId)}
-                    disabled={deletingId === o.docId}
-                  >
-                    {deletingId === o.docId ? <Spinner /> : 'Delete'}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
       )}
 
       {plan && (
@@ -350,6 +295,76 @@ export default function Config() {
         </div>
       )}
       <ConfirmSettings />
+
+      {/* Maintenance: rare, connection-only cleanup, kept apart from everyday actions. */}
+      <div className="mt-6 border-t border-edge pt-4">
+        <h3 className="mb-1 font-semibold">Maintenance</h3>
+        <p className="mb-3 text-sm text-muted">
+          Find photo folders left behind by boxes that were never saved, and delete them.
+          Requires a connection.
+        </p>
+        <button
+          type="button"
+          className="btn"
+          onClick={scanOrphans}
+          disabled={scanning || !online}
+          title={online ? 'Scan for photos with no box' : 'Requires a connection'}
+        >
+          {scanning ? (
+            <span className="inline-flex items-center gap-2">
+              <Spinner /> Scanning…
+            </span>
+          ) : (
+            'Scan for orphaned photos'
+          )}
+        </button>
+
+        {orphanError && (
+          <p className="mt-3 text-sm text-danger" role="alert">
+            {orphanError}
+          </p>
+        )}
+
+        {orphans && (
+          <div className="mt-4 rounded-lg border border-edge bg-surface p-3">
+            <h4 className="mb-2 font-semibold">Orphaned photos</h4>
+            {orphans.length === 0 ? (
+              <p className="text-sm text-muted">No orphaned photo folders found.</p>
+            ) : (
+              <ul className="list-none p-0">
+                {orphans.map((o) => (
+                  <li
+                    key={o.docId}
+                    className="flex items-center gap-2.5 border-b border-edge py-2"
+                  >
+                    {o.thumbUrl ? (
+                      <img
+                        src={o.thumbUrl}
+                        alt=""
+                        className="size-10 shrink-0 rounded object-cover"
+                      />
+                    ) : (
+                      <span className="size-10 shrink-0 rounded bg-edge" aria-hidden="true" />
+                    )}
+                    <span className="flex-1 text-sm">
+                      {o.count} photo{o.count === 1 ? '' : 's'}
+                      <span className="block text-xs text-muted">{o.docId}</span>
+                    </span>
+                    <button
+                      type="button"
+                      className="btn"
+                      onClick={() => removeOrphan(o.docId)}
+                      disabled={deletingId === o.docId}
+                    >
+                      {deletingId === o.docId ? <Spinner /> : 'Delete'}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+      </div>
     </section>
   )
 }

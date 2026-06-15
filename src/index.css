@@ -36,12 +36,12 @@ body {
 
 /* Portrait-only on phones. The PWA manifest locks orientation when installed;
    this is the fallback for the browser tab, where the manifest doesn't apply.
-   Scoped to phone-sized landscape (max-height 600px) so desktop/tablet landscape
-   is never blocked. */
+   Scoped to short landscape AND a touch device (pointer: coarse) so a
+   mouse-driven laptop/desktop with a short window is never blocked. */
 .landscape-block {
   display: none;
 }
-@media (orientation: landscape) and (max-height: 600px) {
+@media (orientation: landscape) and (max-height: 600px) and (pointer: coarse) {
   #root {
     display: none;
   }
