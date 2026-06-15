@@ -483,8 +483,6 @@ function RoomForm({
 
 // Curate the shared color palette that rooms choose from.
 function PaletteManager({ colors }: { colors: string[] }) {
-  const [draft, setDraft] = useState('#3b82f6')
-
   return (
     <section className="mt-6 border-t border-edge pt-4">
       <h3 className="mb-1 font-semibold">Box colors</h3>
@@ -523,17 +521,15 @@ function PaletteManager({ colors }: { colors: string[] }) {
         </div>
       )}
 
-      <div className="flex items-center gap-2">
+      {/* The button opens the native color picker; selecting a color adds it. */}
+      <label className="btn inline-flex cursor-pointer items-center gap-2">
+        + Add color
         <input
           type="color"
-          className="h-9 w-12 rounded border border-edge bg-surface"
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
+          className="sr-only"
+          onChange={(e) => addPaletteColor(e.target.value)}
         />
-        <button type="button" className="btn" onClick={() => addPaletteColor(draft)}>
-          Add color
-        </button>
-      </div>
+      </label>
     </section>
   )
 }

@@ -29,7 +29,7 @@ export function PhotoThumbs({ urls, size = 'size-16' }: { urls: string[]; size?:
 // Full-screen image viewer: pinch-to-zoom + drag-to-pan + double-tap to toggle
 // zoom. Tap the backdrop, the ×, or press Escape to close. Dependency-free,
 // driven by pointer events so one and two-finger gestures both work on Android.
-function Lightbox({
+export function Lightbox({
   photos,
   index,
   onClose,

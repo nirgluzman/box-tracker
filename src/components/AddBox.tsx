@@ -9,6 +9,7 @@ import { rangeEnd } from '../data/rooms';
 import { createBox, isRangeOverflow, newBoxId, nextBoxNumber } from '../data/boxes';
 import { deletePhotoPaths, uploadBoxPhoto, type UploadedPhoto } from '../data/photos';
 import { Spinner } from './Spinner';
+import { Lightbox } from './PhotoThumbs';
 import type { RoomDoc } from '../types';
 
 // SPEC 6.2 - Add Box.
@@ -28,6 +29,7 @@ export default function AddBox() {
   const [confirmation, setConfirmation] = useState<string | null>(null);
   const [summarizing, setSummarizing] = useState(false);
   const [removingPath, setRemovingPath] = useState<string | null>(null);
+  const [viewer, setViewer] = useState<number | null>(null);
 
   // When dictation ends, summarize the final transcript into the description.
   const speech = useSpeechRecognition('he-IL', (text) => {
@@ -258,9 +260,19 @@ export default function AddBox() {
         </div>
         {photos.length > 0 && (
           <div className='flex flex-wrap gap-2'>
-            {photos.map((p) => (
+            {photos.map((p, idx) => (
               <div key={p.path} className='relative'>
-                <img src={p.url} alt='' className='size-20 rounded-lg border border-edge object-cover' />
+                <button
+                  type='button'
+                  onClick={() => setViewer(idx)}
+                  className='block rounded-lg'
+                  aria-label='View photo full screen'>
+                  <img
+                    src={p.url}
+                    alt=''
+                    className='size-20 rounded-lg border border-edge object-cover'
+                  />
+                </button>
                 {removingPath === p.path ? (
                   <div className='absolute inset-0 flex items-center justify-center rounded-lg bg-black/50 text-white'>
                     <Spinner />
@@ -302,6 +314,14 @@ export default function AddBox() {
           'Save box'
         )}
       </button>
+
+      {viewer !== null && (
+        <Lightbox
+          photos={photos.map((p) => p.url)}
+          index={viewer}
+          onClose={() => setViewer(null)}
+        />
+      )}
     </section>
   );
 }

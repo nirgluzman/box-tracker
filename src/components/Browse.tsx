@@ -5,7 +5,7 @@ import { useOnline } from '../hooks/useOnline'
 import { addBoxPhoto, boxKey, deleteBox, duplicateKeys, removeBoxPhoto, updateBox } from '../data/boxes'
 import { downloadBoxesCsv } from '../data/csv'
 import { Spinner } from './Spinner'
-import { PhotoThumbs } from './PhotoThumbs'
+import { Lightbox, PhotoThumbs } from './PhotoThumbs'
 import { PencilIcon, TrashIcon } from './icons'
 import type { BoxDoc, RoomDoc } from '../types'
 
@@ -351,6 +351,7 @@ function EditForm({ box, rooms, onDone }: { box: BoxDoc; rooms: RoomDoc[]; onDon
   const online = useOnline()
   const [uploading, setUploading] = useState(false)
   const [removingUrl, setRemovingUrl] = useState<string | null>(null)
+  const [viewer, setViewer] = useState<number | null>(null)
 
   async function save() {
     setBusy(true)
@@ -445,13 +446,20 @@ function EditForm({ box, rooms, onDone }: { box: BoxDoc; rooms: RoomDoc[]; onDon
         <span className="mb-1 block text-sm text-muted">Photos</span>
         {box.photoUrls.length > 0 && (
           <div className="mb-2 flex flex-wrap gap-2">
-            {box.photoUrls.map((url) => (
+            {box.photoUrls.map((url, idx) => (
               <div key={url} className="relative">
-                <img
-                  src={url}
-                  alt=""
-                  className="size-16 rounded border border-edge object-cover"
-                />
+                <button
+                  type="button"
+                  onClick={() => setViewer(idx)}
+                  className="block rounded"
+                  aria-label="View photo full screen"
+                >
+                  <img
+                    src={url}
+                    alt=""
+                    className="size-16 rounded border border-edge object-cover"
+                  />
+                </button>
                 {removingUrl === url ? (
                   <div className="absolute inset-0 flex items-center justify-center rounded bg-black/50 text-white">
                     <Spinner />
@@ -526,6 +534,10 @@ function EditForm({ box, rooms, onDone }: { box: BoxDoc; rooms: RoomDoc[]; onDon
           Cancel
         </button>
       </div>
+
+      {viewer !== null && (
+        <Lightbox photos={box.photoUrls} index={viewer} onClose={() => setViewer(null)} />
+      )}
     </div>
   )
 }
