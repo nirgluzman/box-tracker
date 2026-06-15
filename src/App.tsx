@@ -43,6 +43,26 @@ export default function App() {
     })
   }, [])
 
+  // Sync screen with browser history so the Android back button moves between
+  // screens instead of leaving the app. The seed entry is set when auth becomes
+  // ready (the app shell first renders); each nav pushes a new entry.
+  useEffect(() => {
+    if (!user) return
+    window.history.replaceState({ screen: 'add' }, '')
+    const onPop = (e: PopStateEvent) => {
+      const s = (e.state?.screen as Screen) ?? 'add'
+      setScreen(s)
+    }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [user])
+
+  const navigate = (s: Screen) => {
+    if (s === screen) return
+    window.history.pushState({ screen: s }, '')
+    setScreen(s)
+  }
+
   if (!authReady) return <div className="flex flex-col items-center gap-3 p-12">Loading…</div>
   if (!user) return <Login />
 
@@ -62,7 +82,7 @@ export default function App() {
       </header>
       {/* Top bar on desktop (in-flow, fixed height); pinned to the bottom on
           mobile via position:fixed. Only <main> scrolls. */}
-      <Nav active={screen} onChange={setScreen} />
+      <Nav active={screen} onChange={navigate} />
       <main className="flex-1 overflow-y-auto pb-16 md:pb-0">
         {screen === 'add' && <AddBox />}
         {screen === 'browse' && <Browse />}

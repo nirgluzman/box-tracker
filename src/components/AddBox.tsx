@@ -8,6 +8,7 @@ import { summarize } from '../llm';
 import { rangeEnd } from '../data/rooms';
 import { createBox, isRangeOverflow, newBoxId, nextBoxNumber } from '../data/boxes';
 import { deletePhotoPaths, uploadBoxPhoto, type UploadedPhoto } from '../data/photos';
+import { confirmAction } from '../data/confirmPrefs';
 import { Spinner } from './Spinner';
 import { Lightbox } from './PhotoThumbs';
 import type { RoomDoc } from '../types';
@@ -78,7 +79,7 @@ export default function AddBox() {
   }
 
   async function removePhoto(photo: UploadedPhoto) {
-    if (!window.confirm('Delete this photo?')) return;
+    if (!confirmAction('deletePhoto', 'Delete this photo?')) return;
     setRemovingPath(photo.path);
     try {
       await deletePhotoPaths([photo.path]);

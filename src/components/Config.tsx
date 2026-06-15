@@ -28,8 +28,10 @@ import {
   removePaletteColor,
   seedPalette,
 } from '../data/palette'
+import { confirmAction, CONFIRM_LABELS, type ConfirmKey } from '../data/confirmPrefs'
 import { useOnline } from '../hooks/useOnline'
 import { usePalette } from '../hooks/usePalette'
+import { useConfirmPrefs } from '../hooks/useConfirmPrefs'
 import { Spinner } from './Spinner'
 import { PencilIcon, TrashIcon } from './icons'
 
@@ -98,7 +100,7 @@ export default function Config() {
   }
 
   async function removeOrphan(docId: string) {
-    if (!window.confirm('Delete these orphaned photos? This cannot be undone.')) return
+    if (!confirmAction('deleteOrphans', 'Delete these orphaned photos? This cannot be undone.')) return
     setDeletingId(docId)
     try {
       await deleteOrphanFolder(docId)
@@ -111,7 +113,7 @@ export default function Config() {
   }
 
   async function handleDelete(room: RoomDoc) {
-    if (!window.confirm(`Delete room "${room.name}"? Existing boxes keep their number and color.`))
+    if (!confirmAction('deleteRoom', `Delete room "${room.name}"? Existing boxes keep their number and color.`))
       return
     await deleteRoom(room.id)
   }
@@ -346,7 +348,39 @@ export default function Config() {
           </div>
         </div>
       )}
+      <ConfirmSettings />
     </section>
+  )
+}
+
+// Per-device toggles for the "Are you sure?" prompts on destructive actions.
+function ConfirmSettings() {
+  const { prefs, setPref } = useConfirmPrefs()
+  const keys = Object.keys(CONFIRM_LABELS) as ConfirmKey[]
+  return (
+    <div className="mt-6 border-t border-edge pt-4">
+      <h3 className="mb-1 font-semibold">Confirmation prompts</h3>
+      <p className="mb-3 text-sm text-muted">
+        Ask before destructive actions. Off = act immediately, no prompt. Saved on this
+        device only.
+      </p>
+      <ul className="list-none p-0">
+        {keys.map((key) => (
+          <li key={key} className="flex items-center justify-between border-b border-edge py-2">
+            <label htmlFor={`confirm-${key}`} className="text-sm">
+              {CONFIRM_LABELS[key]}
+            </label>
+            <input
+              id={`confirm-${key}`}
+              type="checkbox"
+              className="size-4"
+              checked={prefs[key]}
+              onChange={(e) => setPref(key, e.target.checked)}
+            />
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }
 
@@ -482,6 +516,74 @@ function RoomForm({
   )
 }
 
+// Discrete color swatches for the palette picker - a curated grid (10 hue
+// families x 6 shades + grays) so users tap a color instead of fiddling with a
+// Hue/Saturation/Value picker. A hex field covers the rare fully-custom color.
+const PRESET_SWATCHES = [
+  '#fee2e2', '#fca5a5', '#ef4444', '#dc2626', '#991b1b', '#7f1d1d',
+  '#ffedd5', '#fdba74', '#f97316', '#ea580c', '#c2410c', '#7c2d12',
+  '#fef3c7', '#fcd34d', '#f59e0b', '#d97706', '#b45309', '#78350f',
+  '#dcfce7', '#86efac', '#22c55e', '#16a34a', '#15803d', '#14532d',
+  '#ccfbf1', '#5eead4', '#14b8a6', '#0d9488', '#0f766e', '#134e4a',
+  '#dbeafe', '#93c5fd', '#3b82f6', '#2563eb', '#1d4ed8', '#1e3a8a',
+  '#e0e7ff', '#a5b4fc', '#6366f1', '#4f46e5', '#4338ca', '#312e81',
+  '#f3e8ff', '#d8b4fe', '#a855f7', '#9333ea', '#7e22ce', '#581c87',
+  '#fce7f3', '#f9a8d4', '#ec4899', '#db2777', '#be185d', '#831843',
+  '#ffffff', '#d1d5db', '#9ca3af', '#6b7280', '#374151', '#111827',
+]
+
+const isHex = (s: string) => /^#?[0-9a-fA-F]{6}$/.test(s.trim())
+
+// Swatch-grid color picker: tap a preset, or type a hex for a custom color.
+function SwatchGridPicker({
+  value,
+  onPick,
+}: {
+  value?: string
+  onPick: (hex: string) => void
+}) {
+  const [custom, setCustom] = useState(value ?? '')
+  const selected = value ? normalizeColor(value) : ''
+  return (
+    <div>
+      <div className="grid grid-cols-6 gap-1.5">
+        {PRESET_SWATCHES.map((c) => (
+          <button
+            key={c}
+            type="button"
+            onClick={() => onPick(c)}
+            aria-label={c}
+            className={`size-8 rounded-md ${
+              normalizeColor(c) === selected
+                ? 'ring-2 ring-accent ring-offset-1 ring-offset-surface'
+                : 'border border-white/20'
+            }`}
+            style={{ background: c }}
+          />
+        ))}
+      </div>
+      <div className="mt-3 flex items-center gap-2">
+        <input
+          type="text"
+          className="field flex-1"
+          value={custom}
+          onChange={(e) => setCustom(e.target.value)}
+          placeholder="#RRGGBB (custom)"
+          aria-label="Custom hex color"
+        />
+        <button
+          type="button"
+          className="btn"
+          disabled={!isHex(custom)}
+          onClick={() => onPick(custom.trim().startsWith('#') ? custom.trim() : `#${custom.trim()}`)}
+        >
+          Use
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // Curate the shared color palette that rooms choose from. Tapping a color opens
 // an Edit / Delete menu.
 function PaletteManager({
@@ -494,6 +596,7 @@ function PaletteManager({
   boxes: BoxDoc[]
 }) {
   const [menuColor, setMenuColor] = useState<string | null>(null)
+  const [adding, setAdding] = useState(false)
 
   function roomsUsing(color: string) {
     return rooms.filter((r) => normalizeColor(r.color) === normalizeColor(color))
@@ -508,7 +611,7 @@ function PaletteManager({
       )
       return
     }
-    if (!window.confirm('Delete this color from the palette?')) return
+    if (!confirmAction('deletePaletteColor', 'Delete this color from the palette?')) return
     removePaletteColor(color)
     setMenuColor(null)
   }
@@ -548,15 +651,38 @@ function PaletteManager({
         </div>
       )}
 
-      {/* The button opens the native color picker; selecting a color adds it. */}
-      <label className="btn inline-flex cursor-pointer items-center gap-2">
+      <button type="button" className="btn" onClick={() => setAdding(true)}>
         + Add color
-        <input
-          type="color"
-          className="sr-only"
-          onChange={(e) => addPaletteColor(e.target.value)}
-        />
-      </label>
+      </button>
+
+      {adding && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setAdding(false)}
+        >
+          <div
+            className="w-full max-w-xs rounded-lg border border-edge bg-surface p-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h4 className="mb-3 font-semibold">Add a color</h4>
+            <SwatchGridPicker
+              onPick={(hex) => {
+                addPaletteColor(hex)
+                setAdding(false)
+              }}
+            />
+            <button
+              type="button"
+              className="btn mt-3 w-full"
+              onClick={() => setAdding(false)}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       {menuColor && (
         <div
@@ -576,17 +702,10 @@ function PaletteManager({
               />
               <span className="font-semibold">Color</span>
             </div>
-            <div className="flex flex-col gap-2">
-              {/* Edit: pick a new color; recolors all rooms/boxes using this one. */}
-              <label className="btn cursor-pointer">
-                Edit color
-                <input
-                  type="color"
-                  className="sr-only"
-                  defaultValue={menuColor}
-                  onChange={(e) => handleEdit(menuColor, e.target.value)}
-                />
-              </label>
+            {/* Edit: pick a new color; recolors all rooms/boxes using this one. */}
+            <p className="mb-2 text-sm text-muted">Pick a new color to replace it:</p>
+            <SwatchGridPicker value={menuColor} onPick={(hex) => handleEdit(menuColor, hex)} />
+            <div className="mt-3 flex flex-col gap-2">
               <button type="button" className="btn" onClick={() => handleDelete(menuColor)}>
                 Delete color
               </button>

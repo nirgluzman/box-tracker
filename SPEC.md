@@ -142,17 +142,23 @@ Seed rooms (optional starting set):
 - "Export CSV" button triggers CSV download of the **full dataset**, ignoring any active room/urgent filters (see section 8).
 
 ### 6.4 Unpack
-- Search input matching either the BoxBuddy box number or the packing company's number (`packingNumber`).
-- On match, show room, description, urgent flag, and photos. If more than one box shares the searched number (possible per section 4.3), show all matches so the user can disambiguate by room.
+- Two search inputs: (a) box number / packing company's number (`packingNumber`), exact match; (b) **contents text search** over `description`. Either or both can be used; results satisfy all non-empty criteria.
+- Contents search is token-based and tolerant: each query word matches if it equals, contains, or is contained by any description word (bidirectional substring, >=2 chars). This handles plurals (`glass` ↔ `glasses`, `plate` ↔ `plates`) and Hebrew attached prefixes (`צלחות` ↔ `וצלחות`) without an LLM or stemmer.
+- On match, show room, description, urgent flag, and photos. If more than one box matches (shared number per section 4.3, or several boxes hold similar contents), show all matches so the user can disambiguate by room.
 - On no match, show "Box not found" message.
+- Each result has a **Delete** action (trash icon), for the unpacking scenario where a box has been opened and emptied. Prompts for confirmation, then removes the Firestore document and all its Storage photos (same delete path as Browse, section 6.3).
 
 ### 6.5 Config
 - Room manager: list of rooms with name, color swatch, and number range.
-- Color palette: a curated, shared list of colors (`settings/palette` doc, default = seed-room colors). Config has a palette manager to add (free color input) / remove colors. Rooms pick their color from this palette (swatch selection) rather than a free picker, keeping the scheme consistent. Removing a palette color does not change rooms already using it; an out-of-palette color stays selectable when editing that room.
+- Color palette: a curated, shared list of colors (`settings/palette` doc, default = seed-room colors). Config has a palette manager to add / remove colors. Rooms pick their color from this palette rather than a free picker, keeping the scheme consistent. Removing a palette color does not change rooms already using it; an out-of-palette color stays selectable when editing that room.
+- Color UI (no Hue/Saturation/Value picker - users found continuous SV pickers, including the OS-native `<input type="color">` dialog and `react-colorful`, unnatural):
+  - **Picking a room color** = swatch selection from the palette (the existing color pills).
+  - **Adding / editing a palette color** = a discrete swatch-grid picker (`SwatchGridPicker`): a curated grid of preset colors (10 hue families x 6 shades + grays) rendered as tappable tiles, plus a hex text field for the rare fully-custom color. No SV square, no native color dialog. Selected color is highlighted with a ring. Stored as a hex string in `settings/palette`. Editing a palette color recolors every room/box using it (one batch).
 - Add room: name input, color (chosen from the palette), and range start (number input, auto-suggested as the next available multiple of 100, editable).
 - Adding a room warns if the entered range start overlaps with (a) an existing room's range (rangeStart to rangeStart + 99), or (b) box numbers already in use by any box (including boxes whose room was since deleted). This prevents a new room from reusing a freed range and colliding with orphaned boxes.
 - Edit room: change name, color, or range start. Updates the `rooms` document. Changing range start does not renumber existing boxes, only affects boxes added afterward.
 - Delete room: removes from `rooms`. Boxes already assigned to that room keep their stored room name, color, and numbers.
+- Confirmation prompts: per-device toggles (one per destructive action: delete box, delete photo, delete room, delete palette color, delete orphaned photos) to enable/disable the "Are you sure?" prompt. Default all on. Stored in `localStorage`, not Firestore, so one user disabling a guard does not remove the safety net for the other 3 users. The CSV mass-deletion confirmation (section 8.2) and the Add Box unsaved-photos prompt (section 6.2) are always on and not toggleable.
 - "Download CSV" button (same as Browse export).
 - "Upload CSV" button (see section 8.2).
 - "Orphaned photos" cleanup: scans `boxPhotos/` for `docId` folders with no matching `boxes` document, lists them with thumbnails/counts, and lets the user delete them (section 6.2). Requires a connection.
@@ -278,7 +284,7 @@ VITE_LLM_API_KEY=
 10. Build `Nav.tsx`: responsive nav, bottom bar on mobile, top bar on desktop. App header shows the BoxBuddy title and a sign-out button (section 5).
 11. Build offline indicator component, shown when `navigator.onLine` is false.
 12. Seed `rooms` collection with starting rooms, colors, and ranges (section 4.2), or build empty and let Config screen populate it.
-13. Build `Config.tsx`: room manager (add/edit/delete, color picker, range start with auto-suggest and overlap warning), orphaned-photos cleanup (section 6.2/6.5).
+13. Build `Config.tsx`: room manager (add/edit/delete, palette swatch selection for room color + discrete `SwatchGridPicker` (preset grid + hex field, no SV picker) for adding/editing palette colors, range start with auto-suggest and overlap warning), orphaned-photos cleanup (section 6.2/6.5).
 14. Build `AddBox.tsx`: pre-generate `docId` on open, room pills, mic (`he-IL`) + `llm.ts` summary (passthrough until provider chosen), photo upload to `boxPhotos/{docId}/`, urgent toggle, save with automatic box-number assignment (`max+1`, section 4.3), range-overflow warning, and post-save confirmation, mic/photo disabled offline.
 15. Build `Browse.tsx`: real-time list, filters, card/table responsive views, edit/delete, duplicate box-number warning badge, CSV export.
 16. Build `Unpack.tsx`: search by box number, detail view with photos.

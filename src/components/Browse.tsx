@@ -4,6 +4,7 @@ import { useRooms } from '../hooks/useRooms'
 import { useOnline } from '../hooks/useOnline'
 import { addBoxPhoto, boxKey, deleteBox, duplicateKeys, removeBoxPhoto, updateBox } from '../data/boxes'
 import { downloadBoxesCsv } from '../data/csv'
+import { confirmAction } from '../data/confirmPrefs'
 import { Spinner } from './Spinner'
 import { Lightbox, PhotoThumbs } from './PhotoThumbs'
 import { PencilIcon, TrashIcon } from './icons'
@@ -55,7 +56,7 @@ export default function Browse() {
   }, [groupByRoom, filtered, rooms])
 
   async function handleDelete(box: BoxDoc) {
-    if (!window.confirm(`Delete Box #${box.boxNumber} (${box.room})? This also removes its photos.`))
+    if (!confirmAction('deleteBox', `Delete Box #${box.boxNumber} (${box.room})? This also removes its photos.`))
       return
     setDeletingId(box.id)
     try {
@@ -387,7 +388,7 @@ function EditForm({ box, rooms, onDone }: { box: BoxDoc; rooms: RoomDoc[]; onDon
   }
 
   async function removePhoto(url: string) {
-    if (!window.confirm('Delete this photo?')) return
+    if (!confirmAction('deletePhoto', 'Delete this photo?')) return
     setRemovingUrl(url)
     try {
       await removeBoxPhoto(box.id, url)
