@@ -147,7 +147,8 @@ Seed rooms (optional starting set):
 
 ### 6.5 Config
 - Room manager: list of rooms with name, color swatch, and number range.
-- Add room: name input, color picker, and range start (number input, auto-suggested as the next available multiple of 100, editable).
+- Color palette: a curated, shared list of colors (`settings/palette` doc, default = seed-room colors). Config has a palette manager to add (free color input) / remove colors. Rooms pick their color from this palette (swatch selection) rather than a free picker, keeping the scheme consistent. Removing a palette color does not change rooms already using it; an out-of-palette color stays selectable when editing that room.
+- Add room: name input, color (chosen from the palette), and range start (number input, auto-suggested as the next available multiple of 100, editable).
 - Adding a room warns if the entered range start overlaps with (a) an existing room's range (rangeStart to rangeStart + 99), or (b) box numbers already in use by any box (including boxes whose room was since deleted). This prevents a new room from reusing a freed range and colliding with orphaned boxes.
 - Edit room: change name, color, or range start. Updates the `rooms` document. Changing range start does not renumber existing boxes, only affects boxes added afterward.
 - Delete room: removes from `rooms`. Boxes already assigned to that room keep their stored room name, color, and numbers.

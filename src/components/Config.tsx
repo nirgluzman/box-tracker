@@ -21,13 +21,21 @@ import {
   type ImportPlan,
 } from '../data/csv'
 import { deleteOrphanFolder, listOrphanedFolders, type OrphanFolder } from '../data/photos'
+import {
+  addPaletteColor,
+  normalizeColor,
+  removePaletteColor,
+  seedPalette,
+} from '../data/palette'
 import { useOnline } from '../hooks/useOnline'
+import { usePalette } from '../hooks/usePalette'
 import { Spinner } from './Spinner'
 
 // SPEC 6.5 — Config / room manager + CSV download/upload (SPEC 8) + orphaned-photos cleanup (SPEC 6.2).
 export default function Config() {
   const { rooms, loading } = useRooms()
   const { boxes } = useBoxes()
+  const { colors: palette } = usePalette()
   const online = useOnline()
   const boxNumbers = boxes.map((b) => b.boxNumber)
 
@@ -134,6 +142,7 @@ export default function Config() {
                 initial={room}
                 rooms={rooms}
                 boxNumbers={boxNumbers}
+                palette={palette}
                 excludeId={room.id}
                 submitLabel="Save"
                 onSubmit={async (values) => {
@@ -172,6 +181,7 @@ export default function Config() {
         <RoomForm
           rooms={rooms}
           boxNumbers={boxNumbers}
+          palette={palette}
           submitLabel="Add room"
           onSubmit={async (values) => {
             await addRoom(values)
@@ -184,6 +194,8 @@ export default function Config() {
           + Add room
         </button>
       )}
+
+      <PaletteManager colors={palette} />
 
       <div className="mt-6 flex flex-wrap gap-2 border-t border-edge pt-4">
         <button
@@ -327,6 +339,7 @@ function RoomForm({
   initial,
   rooms,
   boxNumbers,
+  palette,
   excludeId,
   submitLabel,
   onSubmit,
@@ -335,13 +348,19 @@ function RoomForm({
   initial?: RoomDoc
   rooms: RoomDoc[]
   boxNumbers: number[]
+  palette: string[]
   excludeId?: string
   submitLabel: string
   onSubmit: (values: Room) => Promise<void>
   onCancel: () => void
 }) {
   const [name, setName] = useState(initial?.name ?? '')
-  const [color, setColor] = useState(initial?.color ?? '#85B7EB')
+  const [color, setColor] = useState(initial?.color ?? palette[0] ?? '#85b7eb')
+  // Keep a legacy/edited color selectable even if it's no longer in the palette.
+  const swatches =
+    color && !palette.some((c) => normalizeColor(c) === normalizeColor(color))
+      ? [color, ...palette]
+      : palette
   const [rangeStart, setRangeStart] = useState<number>(
     initial?.rangeStart ?? suggestNextRangeStart(rooms),
   )
@@ -375,15 +394,31 @@ function RoomForm({
         onChange={(e) => setName(e.target.value)}
         required
       />
-      <label className="flex items-center gap-2">
-        Color
-        <input
-          type="color"
-          className="h-9 w-12 rounded border border-edge bg-surface"
-          value={color}
-          onChange={(e) => setColor(e.target.value)}
-        />
-      </label>
+      <div>
+        <span className="mb-1 block text-sm text-muted">Color</span>
+        {swatches.length === 0 ? (
+          <p className="text-sm text-warn">No colors in the palette — add some under “Box colors”.</p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {swatches.map((c) => {
+              const selected = normalizeColor(c) === normalizeColor(color)
+              return (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setColor(c)}
+                  aria-label={c}
+                  aria-pressed={selected}
+                  className={`size-8 rounded-full border-2 ${
+                    selected ? 'border-accent ring-2 ring-accent' : 'border-white/20'
+                  }`}
+                  style={{ background: c }}
+                />
+              )
+            })}
+          </div>
+        )}
+      </div>
       <label className="flex items-center gap-2">
         Range start
         <input
@@ -429,5 +464,62 @@ function RoomForm({
         </button>
       </div>
     </form>
+  )
+}
+
+// Curate the shared color palette that rooms choose from.
+function PaletteManager({ colors }: { colors: string[] }) {
+  const [draft, setDraft] = useState('#3b82f6')
+
+  return (
+    <section className="mt-6 border-t border-edge pt-4">
+      <h3 className="mb-1 font-semibold">Box colors</h3>
+      <p className="mb-3 text-sm text-muted">
+        Curate the colors rooms can choose from. Removing a color here doesn’t change rooms
+        already using it.
+      </p>
+
+      {colors.length === 0 ? (
+        <p className="mb-3 text-sm text-warn">
+          No colors yet — add one below or{' '}
+          <button type="button" className="underline" onClick={() => seedPalette()}>
+            load the defaults
+          </button>
+          .
+        </p>
+      ) : (
+        <div className="mb-3 flex flex-wrap gap-2.5">
+          {colors.map((c) => (
+            <div key={c} className="relative">
+              <span
+                className="block size-9 rounded-full border border-white/20"
+                style={{ background: c }}
+                aria-label={c}
+              />
+              <button
+                type="button"
+                onClick={() => removePaletteColor(c)}
+                aria-label={`Remove ${c}`}
+                className="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-danger text-xs text-white"
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="flex items-center gap-2">
+        <input
+          type="color"
+          className="h-9 w-12 rounded border border-edge bg-surface"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+        />
+        <button type="button" className="btn" onClick={() => addPaletteColor(draft)}>
+          Add color
+        </button>
+      </div>
+    </section>
   )
 }
