@@ -164,16 +164,16 @@ export default function AddBox() {
 
   return (
     <section className='mx-auto max-w-xl p-4'>
-      <h2 className='mb-3 text-xl font-semibold'>Add Box</h2>
+      <h2 className='mb-2 text-xl font-semibold'>Add Box</h2>
 
       {confirmation && (
-        <div className='mb-4 rounded-lg border border-accent bg-accent/10 px-3 py-2 text-sm' role='status'>
+        <div className='mb-3 rounded-lg border border-accent bg-accent/10 px-3 py-2 text-sm' role='status'>
           {confirmation}
         </div>
       )}
 
       {/* Room picker (SPEC 6.2) */}
-      <fieldset className='mb-4'>
+      <fieldset className='mb-3'>
         <legend className='mb-2 text-sm text-muted'>Room</legend>
         {rooms.length === 0 ? (
           <p className='text-sm text-muted'>No rooms yet - add rooms in Config first.</p>
@@ -200,8 +200,8 @@ export default function AddBox() {
       </fieldset>
 
       {/* Packing company number (optional, for identification) */}
-      <div className='mb-4'>
-        <label htmlFor='packing' className='mb-2 block text-sm text-muted'>
+      <div className='mb-3'>
+        <label htmlFor='packing' className='mb-1 block text-sm text-muted'>
           Packing company #
         </label>
         <input
@@ -216,7 +216,7 @@ export default function AddBox() {
       </div>
 
       {/* Description + mic (SPEC 6.2 / 7) */}
-      <div className='mb-4'>
+      <div className='mb-3'>
         <div className='mb-2 flex items-center justify-between gap-2'>
           <label htmlFor='desc' className='flex items-center gap-2 text-sm text-muted'>
             Description
@@ -264,9 +264,12 @@ export default function AddBox() {
             {micErrorMessage(speech.error)}
           </p>
         )}
+        {/* Starts at ~2 lines and grows with content (field-sizing), capped so
+            it never pushes the form off a phone screen - then scrolls. */}
         <textarea
           id='desc'
-          className='field min-h-24 w-full'
+          rows={2}
+          className='field w-full resize-none field-sizing-content max-h-32'
           value={summarizing ? 'Summarizing…' : description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder='Type, or use the mic'
@@ -276,7 +279,7 @@ export default function AddBox() {
       </div>
 
       {/* Photos (SPEC 6.2) */}
-      <div className='mb-4'>
+      <div className='mb-3'>
         <div className='mb-2 flex flex-wrap items-center gap-3'>
           {/* Take photo: capture='environment' opens the rear camera. Disabled
               on laptops (no rear camera, `capture` is ignored there) - use
@@ -351,12 +354,12 @@ export default function AddBox() {
       </div>
 
       {/* Urgent toggle (SPEC 6.2) */}
-      <div className='mb-5'>
+      <div className='mb-3'>
         <label className='flex items-center gap-2'>
           <input type='checkbox' checked={urgent} onChange={(e) => setUrgent(e.target.checked)} className='size-4' />
           Urgent
+          <span className='text-xs text-muted'>- open first</span>
         </label>
-        <p className='mt-1 text-xs text-muted'>Mark boxes to open first.</p>
       </div>
 
       <button
