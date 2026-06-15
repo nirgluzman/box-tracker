@@ -13,6 +13,7 @@ export function useSpeechRecognition(lang = 'he-IL', onFinal?: (text: string) =>
   const [error, setError] = useState<string | null>(null)
   const recRef = useRef<SpeechRecognition | null>(null)
   const finalRef = useRef('')
+  const latestRef = useRef('') // final + interim, as a fallback when no final fires
 
   // Keep the latest onFinal without recreating start().
   const onFinalRef = useRef(onFinal)
@@ -26,6 +27,7 @@ export function useSpeechRecognition(lang = 'he-IL', onFinal?: (text: string) =>
   const start = useCallback(() => {
     if (!Ctor) return
     finalRef.current = ''
+    latestRef.current = ''
     setTranscript('')
     setError(null)
 
@@ -41,7 +43,8 @@ export function useSpeechRecognition(lang = 'he-IL', onFinal?: (text: string) =>
         if (result.isFinal) finalRef.current += result[0].transcript
         else interim += result[0].transcript
       }
-      setTranscript(finalRef.current + interim)
+      latestRef.current = finalRef.current + interim
+      setTranscript(latestRef.current)
     }
     // Surface the failure instead of silently stopping - "no-speech",
     // "not-allowed" (mic blocked), "audio-capture" (no mic), "network", etc.
@@ -51,7 +54,9 @@ export function useSpeechRecognition(lang = 'he-IL', onFinal?: (text: string) =>
     }
     rec.onend = () => {
       setListening(false)
-      const text = finalRef.current.trim()
+      // Some engines (desktop Chrome) only emit interim results; fall back to
+      // the latest interim text so a completed recording still yields something.
+      const text = (finalRef.current.trim() || latestRef.current.trim())
       if (text) onFinalRef.current?.(text)
     }
 
@@ -71,6 +76,7 @@ export function useSpeechRecognition(lang = 'he-IL', onFinal?: (text: string) =>
 
   const reset = useCallback(() => {
     finalRef.current = ''
+    latestRef.current = ''
     setTranscript('')
   }, [])
 

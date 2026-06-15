@@ -1,17 +1,16 @@
 import { useEffect, useState } from 'react'
 
-const BARS = 7
-
-// While `active`, open the mic and return live per-bar audio magnitudes (0..1)
-// for a simple equalizer-style visualizer, so the user sees the mic is picking
-// up their voice. Independent of SpeechRecognition (which manages its own audio);
-// both can read the mic at once. Returns flat bars when inactive or on denial.
-export function useMicLevel(active: boolean): number[] {
-  const [bars, setBars] = useState<number[]>(() => Array(BARS).fill(0))
+// While `active`, open the mic and return the live input loudness (RMS, 0..1)
+// so a visualizer can react to the user's voice. Time-domain amplitude is used
+// (not a frequency band) so any speech drives it, not just certain pitches.
+// Independent of SpeechRecognition; both can read the mic at once. 0 when
+// inactive or if mic access is denied.
+export function useMicLevel(active: boolean): number {
+  const [level, setLevel] = useState(0)
 
   useEffect(() => {
     if (!active) {
-      setBars(Array(BARS).fill(0))
+      setLevel(0)
       return
     }
     let stream: MediaStream | null = null
@@ -30,25 +29,24 @@ export function useMicLevel(active: boolean): number[] {
         ctx = new AudioContext()
         const src = ctx.createMediaStreamSource(s)
         const analyser = ctx.createAnalyser()
-        analyser.fftSize = 64
+        analyser.fftSize = 256
         src.connect(analyser)
-        const data = new Uint8Array(analyser.frequencyBinCount)
-        const per = Math.floor(data.length / BARS)
+        const data = new Uint8Array(analyser.fftSize)
         const loop = () => {
-          analyser.getByteFrequencyData(data)
-          const next: number[] = []
-          for (let i = 0; i < BARS; i++) {
-            let sum = 0
-            for (let j = 0; j < per; j++) sum += data[i * per + j]
-            next.push(Math.min(1, sum / per / 170))
+          analyser.getByteTimeDomainData(data)
+          let sum = 0
+          for (let i = 0; i < data.length; i++) {
+            const v = (data[i] - 128) / 128
+            sum += v * v
           }
-          setBars(next)
+          const rms = Math.sqrt(sum / data.length)
+          setLevel(Math.min(1, rms * 3)) // gain so normal speech fills the bars
           raf = requestAnimationFrame(loop)
         }
         loop()
       })
       .catch(() => {
-        /* mic denied/unavailable - leave bars flat */
+        /* mic denied/unavailable - stays at 0 */
       })
 
     return () => {
@@ -59,5 +57,5 @@ export function useMicLevel(active: boolean): number[] {
     }
   }, [active])
 
-  return bars
+  return level
 }
