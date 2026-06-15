@@ -34,11 +34,19 @@ export default function AddBox() {
   const [removingPath, setRemovingPath] = useState<string | null>(null);
   const [viewer, setViewer] = useState<number | null>(null);
 
-  // When dictation ends, summarize the final transcript into the description.
+  // When dictation ends, summarize the final transcript and append it to the
+  // description (don't overwrite) - the user may record in several passes.
   const speech = useSpeechRecognition('he-IL', (text) => {
     setSummarizing(true);
     summarize(text)
-      .then((s) => setDescription(s))
+      .then((s) => {
+        const add = s.trim();
+        if (!add) return;
+        setDescription((prev) => {
+          const base = prev.trim();
+          return base ? `${base}, ${add}` : add;
+        });
+      })
       .finally(() => setSummarizing(false));
   });
 

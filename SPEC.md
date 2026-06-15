@@ -116,7 +116,7 @@ Seed rooms (optional starting set):
 - Mic button starts Web Speech API recognition.
 - Live transcript shown while speaking.
 - On stop, send transcript to the LLM module for summarization (provider TBD, see section 7).
-- Summary fills description field, editable before save.
+- Summary is appended to the description field (never overwrites existing text), editable before save - so the user can dictate in several passes until everything is captured. Appended after the current text, comma-separated.
 - The box's Firestore document ID is generated client-side when the form opens (e.g. `doc(collection(db, 'boxes')).id`), so photos can be stored under a stable path before the document is written.
 - Photo button opens camera or gallery, uploads to Storage under `boxPhotos/{docId}/...`, appends the download URL to photoUrls. The rear-camera "Take photo" button (`capture='environment'`) is enabled on touch devices only (detected via `pointer: coarse`); on laptops/desktops it is shown but disabled/grayed out (with a tooltip), since there is no useful rear camera and `capture` is ignored - "Gallery" upload and voice input remain available there. Same rule applies to the Edit form on Browse.
 - Orphaned photos: if the user uploads photos then leaves the form without saving (navigates away, resets, or closes the app), those files would otherwise stay under that `docId` path with no document. Handling:
@@ -183,7 +183,7 @@ quotes, no trailing punctuation. If no items can be identified, return the
 transcript with filler removed.
 ```
 
-- Response text fills the description field.
+- Response text is appended to the description field (comma-separated), preserving anything already there, so multiple recordings accumulate rather than overwrite.
 - User can edit the result before saving (manual keyboard editing is always available).
 - If no LLM key is set or the request fails, `llm.ts` returns the raw transcript unchanged (passthrough), so voice input never blocks saving.
 
