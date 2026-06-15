@@ -76,6 +76,7 @@ export default function AddBox() {
   }
 
   async function removePhoto(photo: UploadedPhoto) {
+    if (!window.confirm('Delete this photo?')) return;
     setRemovingPath(photo.path);
     try {
       await deletePhotoPaths([photo.path]);

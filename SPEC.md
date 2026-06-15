@@ -132,11 +132,12 @@ Seed rooms (optional starting set):
 ### 6.3 Browse
 - Real-time list of all boxes from `boxes`, ordered by boxNumber.
 - Filter controls: by room, by urgent flag.
+- "Group by room" option: when enabled, the list is split into per-room sections (ordered by `rangeStart`, deleted-room names last) with a color-coded header and box count; otherwise it stays a flat boxNumber-ordered list. Works in both card and table views.
 - Mobile: card per box, color-coded by room.
 - Desktop: table view, same data.
-- Each box has Edit and Delete actions.
-- Edit opens an inline form, prefilled with current values.
-- Delete removes the Firestore document and all files in photoUrls from Storage, after a confirmation prompt.
+- Each box has Edit and Delete actions, shown as icons (pencil / trash) for clarity.
+- Edit opens an inline form, prefilled with current values. The form can also add photos (rear camera or gallery) and remove existing photos on the box, which persist immediately (section 13 — the "type now, add photos later" flow).
+- Delete removes the Firestore document and all files in photoUrls from Storage, after a confirmation prompt. Removing an individual photo also prompts for confirmation.
 - Boxes with a duplicate `boxNumber` within the same room (see section 4.3) are flagged with a warning badge.
 - "Export CSV" button triggers CSV download of the **full dataset**, ignoring any active room/urgent filters (see section 8).
 
@@ -159,18 +160,22 @@ Seed rooms (optional starting set):
 ## 7. Voice-to-Summary Flow
 - Web Speech API (`webkitSpeechRecognition` on Android Chrome). There is no "auto" language value; set `recognition.lang = 'he-IL'` explicitly. (Android-only target, section 2.)
 - On `onresult`, collect final transcript.
-- Transcript is sent to `llm.ts`, a small abstraction module with one function (e.g. `summarize(transcript)`). Implementation calls whichever LLM provider is chosen — **provider and API details TBD**.
-- Suggested prompt, to be adapted to the chosen provider's API format:
+- Transcript is sent to `llm.ts`, a small abstraction module with one function (`summarize(transcript)`). Provider: **Groq** (`llama-3.3-70b-versatile`, OpenAI-compatible endpoint). Gemini was evaluated but its free tier is region-blocked.
+- The goal is a tight box-contents label, not a prose summary: extract only the physical items packed, as a concise comma-separated list, dropping filler, repetitions, hesitations, side comments, and background talk. Keep the original language (Hebrew); do not translate. Output only the list — no preamble or quotes. If no items are found, return the transcript with filler removed. Implemented as a system prompt:
 
 ```
-Summarize the following text in 1-2 concise sentences.
-Keep the same language as the input. Do not translate.
-Text: "{transcript}"
+You label moving boxes. From the spoken transcript of one box's contents,
+extract a concise, comma-separated list of the physical items only. Keep the
+original language; do not translate. Remove filler words, repetitions,
+hesitations, side comments, and any background talk or anything that is not an
+item being packed. Output ONLY the list — no introduction, no explanation, no
+quotes, no trailing punctuation. If no items can be identified, return the
+transcript with filler removed.
 ```
 
 - Response text fills the description field.
-- User can edit the result before saving.
-- Until the provider is decided, `llm.ts` can return the raw transcript unchanged (passthrough), so the rest of the app is fully functional with manual editing in the meantime.
+- User can edit the result before saving (manual keyboard editing is always available).
+- If no LLM key is set or the request fails, `llm.ts` returns the raw transcript unchanged (passthrough), so voice input never blocks saving.
 
 ## 8. CSV Import/Export
 

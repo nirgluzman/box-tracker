@@ -30,6 +30,7 @@ import {
 import { useOnline } from '../hooks/useOnline'
 import { usePalette } from '../hooks/usePalette'
 import { Spinner } from './Spinner'
+import { PencilIcon, TrashIcon } from './icons'
 
 // SPEC 6.5 — Config / room manager + CSV download/upload (SPEC 8) + orphaned-photos cleanup (SPEC 6.2).
 export default function Config() {
@@ -96,6 +97,7 @@ export default function Config() {
   }
 
   async function removeOrphan(docId: string) {
+    if (!window.confirm('Delete these orphaned photos? This cannot be undone.')) return
     setDeletingId(docId)
     try {
       await deleteOrphanFolder(docId)
@@ -166,11 +168,23 @@ export default function Config() {
               <span className="text-muted tabular-nums">
                 {room.rangeStart}–{rangeEnd(room.rangeStart)}
               </span>
-              <button type="button" className="btn" onClick={() => setEditingId(room.id)}>
-                Edit
+              <button
+                type="button"
+                className="btn px-3"
+                onClick={() => setEditingId(room.id)}
+                aria-label="Edit"
+                title="Edit"
+              >
+                <PencilIcon />
               </button>
-              <button type="button" className="btn" onClick={() => handleDelete(room)}>
-                Delete
+              <button
+                type="button"
+                className="btn px-3"
+                onClick={() => handleDelete(room)}
+                aria-label="Delete"
+                title="Delete"
+              >
+                <TrashIcon />
               </button>
             </li>
           ),

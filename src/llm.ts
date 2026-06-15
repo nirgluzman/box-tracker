@@ -5,10 +5,15 @@ const KEY = import.meta.env.VITE_LLM_API_KEY as string | undefined
 const MODEL = 'llama-3.3-70b-versatile'
 const ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions'
 
-const SUMMARY_PROMPT = (transcript: string) =>
-  `Summarize the following text in 1-2 concise sentences.\n` +
-  `Keep the same language as the input. Do not translate.\n` +
-  `Text: "${transcript}"`
+// Extract just the box's contents as a tight item list — the spoken transcript
+// often has filler, repetition, and background chatter we don't want on the label.
+const SYSTEM_PROMPT =
+  "You label moving boxes. From the spoken transcript of one box's contents, extract a " +
+  'concise, comma-separated list of the physical items only. Keep the original language; ' +
+  'do not translate. Remove filler words, repetitions, hesitations, side comments, and any ' +
+  'background talk or anything that is not an item being packed. Output ONLY the list — no ' +
+  'introduction, no explanation, no quotes, no trailing punctuation. If no items can be ' +
+  'identified, return the transcript with filler removed.'
 
 export async function summarize(transcript: string): Promise<string> {
   if (!KEY) return transcript
@@ -21,8 +26,11 @@ export async function summarize(transcript: string): Promise<string> {
       },
       body: JSON.stringify({
         model: MODEL,
-        messages: [{ role: 'user', content: SUMMARY_PROMPT(transcript) }],
-        temperature: 0.3,
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: transcript },
+        ],
+        temperature: 0.2,
       }),
     })
     if (!res.ok) return transcript
