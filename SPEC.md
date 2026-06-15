@@ -165,20 +165,18 @@ The Unpack screen no longer exists as a separate screen; its capabilities (searc
 - Web Speech API (`webkitSpeechRecognition` on Android Chrome). There is no "auto" language value; set `recognition.lang = 'he-IL'` explicitly. (Android-only target, section 2.)
 - On `onresult`, collect final transcript.
 - Transcript is sent to `llm.ts`, a small abstraction module with one function (`summarize(transcript)`). Provider: **Groq** (`llama-3.3-70b-versatile`, OpenAI-compatible endpoint). Gemini was evaluated but its free tier is region-blocked.
-- The goal is a tight box-contents label, not a prose summary: extract only the physical items packed, as a concise comma-separated list, dropping filler, repetitions, hesitations, side comments, and background talk. Output language is **Hebrew**: if the transcript is in English or German, translate the items to Hebrew. Exception — keep individual English/German words that are normally used as-is in Hebrew (brand names, proper nouns, model names, common loanwords) in their original form, written in their original Latin letters; don't force-translate those and don't transliterate them into Hebrew characters. Output only the list — no preamble or quotes. If no items are found, return the transcript with filler removed. Implemented as a system prompt:
+- The goal is a tight box-contents label, not a prose summary: extract only the physical items packed, as a concise comma-separated list, dropping filler, repetitions, hesitations, side comments, and background talk. Keep each word in its original language — any English or German word is kept exactly as-is in its original Latin letters (never translated, never transliterated into Hebrew); Hebrew words stay in Hebrew. Output only the list — no preamble or quotes. If no items are found, return the transcript with filler removed. Implemented as a system prompt:
 
 ```
 You label moving boxes. From the spoken transcript of one box's contents,
-extract a concise, comma-separated list of the physical items only, in Hebrew.
-If the transcript is in English or German, translate the items into Hebrew. But
-keep individual English or German words that are normally used as-is in Hebrew -
-brand names, proper nouns, model names, and common loanwords - in their original
-form, written in their original Latin letters; do not translate those and do not
-transliterate them into Hebrew characters. Remove filler words, repetitions,
-hesitations, side comments, and any background talk or anything that is not an
-item being packed. Output ONLY the list — no introduction, no explanation, no
-quotes, no trailing punctuation. If no items can be identified, return the
-transcript with filler removed.
+extract a concise, comma-separated list of the physical items only. Keep each
+word in its original language: if a word is in English or German, keep it
+exactly as-is in its original Latin letters - do not translate it and do not
+transliterate it into Hebrew. Hebrew words stay in Hebrew. Remove filler words,
+repetitions, hesitations, side comments, and any background talk or anything
+that is not an item being packed. Output ONLY the list — no introduction, no
+explanation, no quotes, no trailing punctuation. If no items can be identified,
+return the transcript with filler removed.
 ```
 
 - Response text is appended to the description field (comma-separated), preserving anything already there, so multiple recordings accumulate rather than overwrite.

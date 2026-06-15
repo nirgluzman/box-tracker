@@ -9,15 +9,13 @@ const ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions'
 // often has filler, repetition, and background chatter we don't want on the label.
 const SYSTEM_PROMPT =
   "You label moving boxes. From the spoken transcript of one box's contents, extract a " +
-  'concise, comma-separated list of the physical items only, in Hebrew. If the transcript is ' +
-  'in English or German, translate the items into Hebrew. But keep individual English or ' +
-  'German words that are normally used as-is in Hebrew - brand names, proper nouns, model ' +
-  'names, and common loanwords - in their original form, written in their original Latin ' +
-  'letters; do not translate those and do not transliterate them into Hebrew characters. ' +
-  'Remove filler words, repetitions, hesitations, side comments, and any background talk or ' +
-  'anything that is not an item being packed. Output ONLY the list - no introduction, no ' +
-  'explanation, no quotes, no trailing punctuation. If no items can be identified, return the ' +
-  'transcript with filler removed.'
+  'concise, comma-separated list of the physical items only. Keep each word in its original ' +
+  'language: if a word is in English or German, keep it exactly as-is in its original Latin ' +
+  'letters - do not translate it and do not transliterate it into Hebrew. Hebrew words stay ' +
+  'in Hebrew. Remove filler words, repetitions, hesitations, side comments, and any ' +
+  'background talk or anything that is not an item being packed. Output ONLY the list - no ' +
+  'introduction, no explanation, no quotes, no trailing punctuation. If no items can be ' +
+  'identified, return the transcript with filler removed.'
 
 export async function summarize(transcript: string): Promise<string> {
   if (!KEY) return transcript
