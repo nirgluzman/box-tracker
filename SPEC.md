@@ -182,6 +182,7 @@ can be identified, return the transcript with filler removed.
 ```
 
 - Response text is appended to the description field (comma-separated), preserving anything already there, so multiple recordings accumulate rather than overwrite.
+- While dictating, a live mic-level visualizer (equalizer bars driven by Web Audio `AnalyserNode` on the mic stream) gives feedback that the mic is capturing. Recognition errors (`not-allowed`, `audio-capture`, `no-speech`, `network`, ...) are surfaced as an inline message instead of failing silently. Works in desktop Chrome as well as Android.
 - User can edit the result before saving (manual keyboard editing is always available).
 - If no LLM key is set or the request fails, `llm.ts` returns the raw transcript unchanged (passthrough), so voice input never blocks saving.
 

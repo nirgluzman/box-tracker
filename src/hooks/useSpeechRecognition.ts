@@ -10,6 +10,7 @@ export function useSpeechRecognition(lang = 'he-IL', onFinal?: (text: string) =>
 
   const [listening, setListening] = useState(false)
   const [transcript, setTranscript] = useState('')
+  const [error, setError] = useState<string | null>(null)
   const recRef = useRef<SpeechRecognition | null>(null)
   const finalRef = useRef('')
 
@@ -26,6 +27,7 @@ export function useSpeechRecognition(lang = 'he-IL', onFinal?: (text: string) =>
     if (!Ctor) return
     finalRef.current = ''
     setTranscript('')
+    setError(null)
 
     const rec = new Ctor()
     rec.lang = lang
@@ -41,16 +43,26 @@ export function useSpeechRecognition(lang = 'he-IL', onFinal?: (text: string) =>
       }
       setTranscript(finalRef.current + interim)
     }
-    rec.onerror = () => setListening(false)
+    // Surface the failure instead of silently stopping - "no-speech",
+    // "not-allowed" (mic blocked), "audio-capture" (no mic), "network", etc.
+    rec.onerror = (e) => {
+      setError((e as unknown as { error?: string }).error ?? 'error')
+      setListening(false)
+    }
     rec.onend = () => {
       setListening(false)
       const text = finalRef.current.trim()
       if (text) onFinalRef.current?.(text)
     }
 
-    recRef.current = rec
-    rec.start()
-    setListening(true)
+    try {
+      recRef.current = rec
+      rec.start()
+      setListening(true)
+    } catch {
+      setError('start-failed')
+      setListening(false)
+    }
   }, [Ctor, lang])
 
   const stop = useCallback(() => {
@@ -62,5 +74,5 @@ export function useSpeechRecognition(lang = 'he-IL', onFinal?: (text: string) =>
     setTranscript('')
   }, [])
 
-  return { supported, listening, transcript, start, stop, reset }
+  return { supported, listening, transcript, error, start, stop, reset }
 }

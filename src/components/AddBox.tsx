@@ -12,7 +12,25 @@ import { deletePhotoPaths, uploadBoxPhoto, type UploadedPhoto } from '../data/ph
 import { confirmAction } from '../data/confirmPrefs';
 import { Spinner } from './Spinner';
 import { Lightbox } from './PhotoThumbs';
+import { MicVisualizer } from './MicVisualizer';
 import type { RoomDoc } from '../types';
+
+// Friendly text for Web Speech API error codes (otherwise the failure is silent).
+function micErrorMessage(code: string): string {
+  switch (code) {
+    case 'not-allowed':
+    case 'service-not-allowed':
+      return 'Microphone access blocked. Allow mic access for this site in the browser, then try again.';
+    case 'audio-capture':
+      return 'No microphone found. Check your mic and try again.';
+    case 'no-speech':
+      return "Didn't catch anything. Tap Speak and talk a bit louder.";
+    case 'network':
+      return 'Voice recognition needs a network connection and failed to reach it.';
+    default:
+      return "Voice input didn't work. Try again.";
+  }
+}
 
 // SPEC 6.2 - Add Box.
 export default function AddBox() {
@@ -216,8 +234,16 @@ export default function AddBox() {
           </button>
         </div>
         {speech.listening && (
-          <p className='mb-2 text-sm text-muted' aria-live='polite'>
-            {speech.transcript || 'Listening…'}
+          <div className='mb-2 flex items-center gap-3'>
+            <MicVisualizer active={speech.listening} />
+            <p className='text-sm text-muted' aria-live='polite'>
+              {speech.transcript || 'Listening…'}
+            </p>
+          </div>
+        )}
+        {speech.error && !speech.listening && (
+          <p className='mb-2 text-sm text-danger' role='alert'>
+            {micErrorMessage(speech.error)}
           </p>
         )}
         <textarea
