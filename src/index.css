@@ -20,6 +20,17 @@ html {
   color-scheme: dark;
 }
 
+/* Mic "listening" equalizer bars (decorative, no mic stream needed). */
+@keyframes mic-bounce {
+  0%,
+  100% {
+    transform: scaleY(0.25);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
 body {
   margin: 0;
   background: var(--color-bg);

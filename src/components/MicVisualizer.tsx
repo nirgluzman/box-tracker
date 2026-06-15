@@ -1,27 +1,19 @@
-import { useMicLevel } from '../hooks/useMicLevel'
+// "Listening" indicator: animated equalizer bars shown while dictating. Driven
+// purely by CSS (no second getUserMedia stream) so it never competes with
+// SpeechRecognition for the microphone. Staggered delays make it look alive.
+const DELAYS = ['0ms', '120ms', '240ms', '360ms', '180ms', '60ms']
 
-// Bell-shaped per-bar weights so the center bars peak higher - all bars react
-// to the single loudness level, just by different amounts.
-const WEIGHTS = [0.45, 0.7, 0.9, 1, 0.9, 0.7, 0.45]
-
-// Live equalizer bars showing mic loudness while dictating. Self-contained so
-// its ~60fps updates don't re-render the parent form.
 export function MicVisualizer({ active }: { active: boolean }) {
-  const level = useMicLevel(active)
+  if (!active) return null
   return (
     <div className="flex h-6 items-center gap-1" aria-hidden="true">
-      {WEIGHTS.map((w, i) => {
-        // Small per-bar jitter so the bars shimmer rather than move in lockstep.
-        const jitter = 0.8 + Math.random() * 0.4
-        const h = Math.max(10, Math.min(100, level * w * jitter * 120))
-        return (
-          <span
-            key={i}
-            className="w-1.5 rounded-full bg-accent transition-[height] duration-75"
-            style={{ height: `${h}%` }}
-          />
-        )
-      })}
+      {DELAYS.map((d, i) => (
+        <span
+          key={i}
+          className="h-full w-1.5 origin-center rounded-full bg-accent"
+          style={{ animation: 'mic-bounce 0.8s ease-in-out infinite', animationDelay: d }}
+        />
+      ))}
     </div>
   )
 }
