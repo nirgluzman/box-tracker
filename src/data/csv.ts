@@ -3,7 +3,16 @@ import type { Box, BoxDoc } from '../types'
 // CSV export per SPEC 8.1. Always called with the FULL boxes collection —
 // import infers deletions from absent rows, so a filtered export would wrongly
 // delete the filtered-out boxes.
-const COLUMNS = ['Box Number', 'Room', 'Description', 'Urgent', 'Added By', 'Date Added', '_docId']
+const COLUMNS = [
+  'Box Number',
+  'Packing Number',
+  'Room',
+  'Description',
+  'Urgent',
+  'Added By',
+  'Date Added',
+  '_docId',
+]
 
 function escape(value: string | number): string {
   const s = String(value ?? '')
@@ -20,6 +29,7 @@ export function boxesToCsv(boxes: BoxDoc[]): string {
   const rows = boxes.map((b) =>
     [
       b.boxNumber,
+      b.packingNumber ?? '',
       b.room,
       b.description,
       b.urgent ? 'Yes' : 'No',
@@ -93,6 +103,7 @@ export function parseCsv(input: string): string[][] {
 
 export interface ImportRecord {
   boxNumber: number
+  packingNumber: string
   room: string
   description: string
   urgent: boolean
@@ -114,6 +125,7 @@ export function csvToRecords(rows: string[][]): ImportRecord[] {
   }
   return rows.slice(1).map((r) => ({
     boxNumber: Number(get(r, 'Box Number')),
+    packingNumber: get(r, 'Packing Number').trim(),
     room: get(r, 'Room').trim(),
     description: get(r, 'Description'),
     urgent: /^yes$/i.test(get(r, 'Urgent').trim()),
@@ -123,7 +135,10 @@ export function csvToRecords(rows: string[][]): ImportRecord[] {
 }
 
 export interface ImportPlan {
-  updates: { id: string; patch: Pick<Box, 'boxNumber' | 'room' | 'roomColor' | 'description' | 'urgent'> }[]
+  updates: {
+    id: string
+    patch: Pick<Box, 'boxNumber' | 'packingNumber' | 'room' | 'roomColor' | 'description' | 'urgent'>
+  }[]
   creates: Omit<Box, 'createdAt'>[]
   deletes: BoxDoc[]
   highDeletion: boolean // file looks partial — needs extra confirmation
@@ -150,6 +165,7 @@ export function planImport(
         id: existing.id,
         patch: {
           boxNumber: rec.boxNumber,
+          packingNumber: rec.packingNumber,
           room: rec.room,
           // roomColor follows the room; keep existing color if the room is unknown.
           roomColor: colorByRoom.get(rec.room) ?? existing.roomColor,
@@ -160,6 +176,7 @@ export function planImport(
     } else {
       creates.push({
         boxNumber: rec.boxNumber,
+        packingNumber: rec.packingNumber,
         room: rec.room,
         roomColor: colorByRoom.get(rec.room) ?? '',
         description: rec.description,

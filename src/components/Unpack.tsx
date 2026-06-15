@@ -1,29 +1,36 @@
 import { useState } from 'react'
 import { useBoxes } from '../hooks/useBoxes'
 
-// SPEC 6.4 — Unpack. Search by box number; show all matches (a number can
-// repeat across rooms, SPEC 4.3); "Box not found" on no match.
+// SPEC 6.4 — Unpack. Search by BoxBuddy number or the packing company's number;
+// show all matches (a number can repeat across rooms, SPEC 4.3); "Box not found"
+// on no match.
 export default function Unpack() {
   const { boxes } = useBoxes()
   const [query, setQuery] = useState('')
 
   const trimmed = query.trim()
-  const num = Number(trimmed)
-  const searched = trimmed !== '' && Number.isFinite(num)
-  const matches = searched ? boxes.filter((b) => b.boxNumber === num) : []
+  const searched = trimmed !== ''
+  const matches = searched
+    ? boxes.filter(
+        (b) =>
+          String(b.boxNumber) === trimmed ||
+          (b.packingNumber ?? '').trim().toLowerCase() === trimmed.toLowerCase(),
+      )
+    : []
 
   return (
     <section className="mx-auto max-w-xl p-4">
       <h2 className="mb-1 text-xl font-semibold">Unpack</h2>
       <p className="mb-3 text-sm text-muted">
-        Enter a box number to see its room, contents, and photos before opening it.
+        Enter a box number or the packing company's number to see its room, contents, and
+        photos before opening it.
       </p>
 
       <input
-        type="number"
+        type="text"
         inputMode="numeric"
         className="field w-full"
-        placeholder="Box number"
+        placeholder="Box number or packing #"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         autoFocus
@@ -40,9 +47,14 @@ export default function Unpack() {
             className="rounded-lg border border-edge bg-surface p-3"
             style={{ borderLeft: `4px solid ${box.roomColor}` }}
           >
-            <div className="mb-1 flex items-center gap-2">
+            <div className="mb-1 flex flex-wrap items-center gap-2">
               <span className="text-lg font-bold tabular-nums">#{box.boxNumber}</span>
               <span className="text-sm text-muted">{box.room}</span>
+              {box.packingNumber && (
+                <span className="rounded bg-surface-2 px-1.5 py-0.5 text-xs text-muted">
+                  Pkg #{box.packingNumber}
+                </span>
+              )}
               {box.urgent && (
                 <span className="rounded bg-danger/20 px-1.5 py-0.5 text-xs text-danger">
                   Urgent
@@ -68,7 +80,7 @@ export default function Unpack() {
 
       {searched && matches.length > 1 && (
         <p className="mt-3 text-xs text-muted">
-          {matches.length} boxes share #{num} — check the room to find the right one.
+          {matches.length} boxes match “{trimmed}” — check the room to find the right one.
         </p>
       )}
     </section>

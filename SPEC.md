@@ -56,6 +56,7 @@ box-tracker/
 | Field | Type | Notes |
 |---|---|---|
 | boxNumber | number | Unique per room range. Assigned automatically at save time as `max existing number in room + 1` (see section 4.3). Not editable on Add Box; editable later via Edit or CSV. |
+| packingNumber | string (optional) | The packing company's own sequential label on the box, entered manually for extra identification. Free text (preserves leading zeros / alphanumeric). Editable on Add Box, Edit, and CSV. Searchable in Unpack. |
 | room | string | Room name, matches a `rooms` document name. |
 | roomColor | string | Hex color, copied from `rooms` at save time. |
 | description | string | AI-summarized, 1-2 sentences. |
@@ -140,7 +141,7 @@ Seed rooms (optional starting set):
 - "Export CSV" button triggers CSV download of the **full dataset**, ignoring any active room/urgent filters (see section 8).
 
 ### 6.4 Unpack
-- Search input for box number.
+- Search input matching either the BoxBuddy box number or the packing company's number (`packingNumber`).
 - On match, show room, description, urgent flag, and photos. If more than one box shares the searched number (possible per section 4.3), show all matches so the user can disambiguate by room.
 - On no match, show "Box not found" message.
 
@@ -175,7 +176,7 @@ Text: "{transcript}"
 ### 8.1 Export
 - Triggered from Browse or Config screen.
 - Always exports the **complete `boxes` collection**, regardless of any filters active on the Browse screen. This is required because import (section 8.2) infers deletions from rows absent in the file — a filtered export re-imported would wrongly delete the filtered-out boxes.
-- Columns, in order: `Box Number, Room, Description, Urgent, Added By, Date Added, _docId`.
+- Columns, in order: `Box Number, Packing Number, Room, Description, Urgent, Added By, Date Added, _docId`.
 - `Urgent` written as `Yes` or `No`.
 - `Date Added` formatted `YYYY-MM-DD`, derived from `createdAt`.
 - `_docId` is the Firestore document ID, last column.

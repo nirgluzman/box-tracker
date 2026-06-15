@@ -3,6 +3,7 @@ import type { Timestamp } from 'firebase/firestore'
 // boxes collection — SPEC 4.1
 export interface Box {
   boxNumber: number
+  packingNumber?: string // optional sequential label from the packing company, for identification
   room: string
   roomColor: string // hex, copied from rooms at save time
   description: string

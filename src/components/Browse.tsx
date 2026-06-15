@@ -116,6 +116,7 @@ export default function Browse() {
             <thead>
               <tr className="border-b border-edge text-muted">
                 <th className="p-2">#</th>
+                <th className="p-2">Packing #</th>
                 <th className="p-2">Room</th>
                 <th className="p-2">Description</th>
                 <th className="p-2">Urgent</th>
@@ -127,7 +128,7 @@ export default function Browse() {
               {filtered.map((box) =>
                 editingId === box.id ? (
                   <tr key={box.id} className="border-b border-edge">
-                    <td colSpan={6} className="p-2">
+                    <td colSpan={7} className="p-2">
                       <EditForm box={box} rooms={rooms} onDone={() => setEditingId(null)} />
                     </td>
                   </tr>
@@ -144,6 +145,7 @@ export default function Browse() {
                       </span>
                       {dupKeys.has(boxKey(box)) && <DuplicateBadge />}
                     </td>
+                    <td className="p-2 tabular-nums text-muted">{box.packingNumber || ''}</td>
                     <td className="p-2">{box.room}</td>
                     <td className="p-2">{box.description}</td>
                     <td className="p-2">{box.urgent ? 'Yes' : ''}</td>
@@ -203,9 +205,14 @@ function BoxCard({
       className="rounded-lg border border-edge bg-surface p-3"
       style={{ borderLeft: `4px solid ${box.roomColor}` }}
     >
-      <div className="mb-1 flex items-center gap-2">
+      <div className="mb-1 flex flex-wrap items-center gap-2">
         <span className="text-lg font-bold tabular-nums">#{box.boxNumber}</span>
         <span className="text-sm text-muted">{box.room}</span>
+        {box.packingNumber && (
+          <span className="rounded bg-surface-2 px-1.5 py-0.5 text-xs text-muted">
+            Pkg #{box.packingNumber}
+          </span>
+        )}
         {box.urgent && (
           <span className="rounded bg-danger/20 px-1.5 py-0.5 text-xs text-danger">Urgent</span>
         )}
@@ -244,6 +251,7 @@ function BoxCard({
 
 function EditForm({ box, rooms, onDone }: { box: BoxDoc; rooms: RoomDoc[]; onDone: () => void }) {
   const [boxNumber, setBoxNumber] = useState(box.boxNumber)
+  const [packingNumber, setPackingNumber] = useState(box.packingNumber ?? '')
   const [roomName, setRoomName] = useState(box.room)
   const [description, setDescription] = useState(box.description)
   const [urgent, setUrgent] = useState(box.urgent)
@@ -254,7 +262,14 @@ function EditForm({ box, rooms, onDone }: { box: BoxDoc; rooms: RoomDoc[]; onDon
     try {
       // roomColor follows the picked room; keep existing color if the room was deleted.
       const roomColor = rooms.find((r) => r.name === roomName)?.color ?? box.roomColor
-      await updateBox(box.id, { boxNumber, room: roomName, roomColor, description, urgent })
+      await updateBox(box.id, {
+        boxNumber,
+        packingNumber: packingNumber.trim(),
+        room: roomName,
+        roomColor,
+        description,
+        urgent,
+      })
       onDone()
     } finally {
       setBusy(false)
@@ -270,6 +285,16 @@ function EditForm({ box, rooms, onDone }: { box: BoxDoc; rooms: RoomDoc[]; onDon
           className="field w-28"
           value={boxNumber}
           onChange={(e) => setBoxNumber(Number(e.target.value))}
+        />
+      </label>
+      <label className="flex items-center gap-2 text-sm">
+        Packing #
+        <input
+          type="text"
+          inputMode="numeric"
+          className="field w-28"
+          value={packingNumber}
+          onChange={(e) => setPackingNumber(e.target.value)}
         />
       </label>
       <select className="field" value={roomName} onChange={(e) => setRoomName(e.target.value)}>

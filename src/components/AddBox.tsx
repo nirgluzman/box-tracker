@@ -19,6 +19,7 @@ export default function AddBox() {
 
   const [docId, setDocId] = useState(newBoxId);
   const [room, setRoom] = useState<RoomDoc | null>(null);
+  const [packingNumber, setPackingNumber] = useState('');
   const [description, setDescription] = useState('');
   const [urgent, setUrgent] = useState(false);
   const [photos, setPhotos] = useState<UploadedPhoto[]>([]);
@@ -88,6 +89,7 @@ export default function AddBox() {
     savedRef.current = false;
     setDocId(newBoxId());
     setRoom(null);
+    setPackingNumber('');
     setDescription('');
     setUrgent(false);
     setPhotos([]);
@@ -101,6 +103,7 @@ export default function AddBox() {
       const boxNumber = nextBoxNumber(room.name, room.rangeStart, boxes);
       await createBox(docId, {
         boxNumber,
+        packingNumber: packingNumber.trim(),
         room: room.name,
         roomColor: room.color,
         description: description.trim(),
@@ -159,6 +162,22 @@ export default function AddBox() {
           </div>
         )}
       </fieldset>
+
+      {/* Packing company number (optional, for identification) */}
+      <div className='mb-4'>
+        <label htmlFor='packing' className='mb-2 block text-sm text-muted'>
+          Packing company #
+        </label>
+        <input
+          id='packing'
+          type='text'
+          inputMode='numeric'
+          className='field w-full'
+          value={packingNumber}
+          onChange={(e) => setPackingNumber(e.target.value)}
+          placeholder="Optional — the number on the company's label"
+        />
+      </div>
 
       {/* Description + mic (SPEC 6.2 / 7) */}
       <div className='mb-4'>
