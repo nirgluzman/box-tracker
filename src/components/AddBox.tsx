@@ -219,7 +219,9 @@ export default function AddBox() {
 
       {/* Photos (SPEC 6.2) */}
       <div className='mb-4'>
-        <div className='mb-2 flex items-center gap-3'>
+        <div className='mb-2 flex flex-wrap items-center gap-3'>
+          {/* Take photo: capture='environment' opens the rear camera. No `multiple`
+              here — browsers ignore `capture` when `multiple` is also set. */}
           <label
             className={`btn inline-flex items-center gap-2 ${!online || uploading ? 'pointer-events-none opacity-50' : ''}`}>
             {uploading ? (
@@ -227,12 +229,24 @@ export default function AddBox() {
                 <Spinner /> Uploading…
               </>
             ) : (
-              '📷 Add photo'
+              '📷 Take photo'
             )}
             <input
               type='file'
               accept='image/*'
               capture='environment'
+              className='hidden'
+              onChange={handlePhotos}
+              disabled={!online || uploading}
+            />
+          </label>
+          {/* Gallery: multi-select from existing photos (no camera capture). */}
+          <label
+            className={`btn inline-flex items-center gap-2 ${!online || uploading ? 'pointer-events-none opacity-50' : ''}`}>
+            🖼 Gallery
+            <input
+              type='file'
+              accept='image/*'
               className='hidden'
               multiple
               onChange={handlePhotos}
