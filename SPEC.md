@@ -131,7 +131,7 @@ Seed rooms (optional starting set):
 
 ### 6.3 Browse
 - Real-time list of all boxes from `boxes`, ordered by boxNumber.
-- Filter controls: by room, by urgent flag.
+- Filter controls: by room (multi-select pills — pick one or several rooms, or "All" to clear) and by urgent flag.
 - "Group by room" option: when enabled, the list is split into per-room sections (ordered by `rangeStart`, deleted-room names last) with a color-coded header and box count; otherwise it stays a flat boxNumber-ordered list. Works in both card and table views.
 - Mobile: card per box, color-coded by room.
 - Desktop: table view, same data.

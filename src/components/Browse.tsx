@@ -15,7 +15,7 @@ export default function Browse() {
   const { boxes, loading } = useBoxes()
   const { rooms } = useRooms()
 
-  const [roomFilter, setRoomFilter] = useState('all')
+  const [roomSel, setRoomSel] = useState<string[]>([]) // empty = all rooms
   const [urgentOnly, setUrgentOnly] = useState(false)
   const [groupByRoom, setGroupByRoom] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -26,10 +26,13 @@ export default function Browse() {
   const filtered = useMemo(
     () =>
       boxes.filter(
-        (b) => (roomFilter === 'all' || b.room === roomFilter) && (!urgentOnly || b.urgent),
+        (b) => (roomSel.length === 0 || roomSel.includes(b.room)) && (!urgentOnly || b.urgent),
       ),
-    [boxes, roomFilter, urgentOnly],
+    [boxes, roomSel, urgentOnly],
   )
+
+  const toggleRoom = (name: string) =>
+    setRoomSel((prev) => (prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]))
 
   // When grouping, split into room sections ordered by rangeStart (deleted-room
   // names fall to the end). Otherwise a single unlabeled group keeps the flat list.
@@ -85,20 +88,42 @@ export default function Browse() {
         </button>
       </div>
 
-      {/* Filters (SPEC 6.3) */}
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <select
-          className="field"
-          value={roomFilter}
-          onChange={(e) => setRoomFilter(e.target.value)}
+      {/* Filters (SPEC 6.3) — select one or more rooms; none = all. */}
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setRoomSel([])}
+          aria-pressed={roomSel.length === 0}
+          className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
+            roomSel.length === 0 ? 'border-accent bg-accent/15 font-semibold' : 'border-edge'
+          }`}
         >
-          <option value="all">All rooms</option>
-          {rooms.map((r) => (
-            <option key={r.id} value={r.name}>
+          All
+        </button>
+        {rooms.map((r) => {
+          const on = roomSel.includes(r.name)
+          return (
+            <button
+              key={r.id}
+              type="button"
+              onClick={() => toggleRoom(r.name)}
+              aria-pressed={on}
+              className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                on ? 'border-accent bg-accent/15 font-semibold' : 'border-edge'
+              }`}
+            >
+              <span
+                className="size-3 rounded-full"
+                style={{ background: r.color }}
+                aria-hidden="true"
+              />
               {r.name}
-            </option>
-          ))}
-        </select>
+            </button>
+          )
+        })}
+      </div>
+
+      <div className="mb-4 flex flex-wrap items-center gap-3">
         <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"
