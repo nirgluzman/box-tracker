@@ -29,7 +29,6 @@ box-tracker/
 │   │   ├── Login.tsx
 │   │   ├── AddBox.tsx
 │   │   ├── Browse.tsx
-│   │   ├── Unpack.tsx
 │   │   ├── Config.tsx
 │   │   └── Nav.tsx
 │   ├── firebase.ts
@@ -56,7 +55,7 @@ box-tracker/
 | Field | Type | Notes |
 |---|---|---|
 | boxNumber | number | Unique per room range. Assigned automatically at save time as `max existing number in room + 1` (see section 4.3). Not editable on Add Box; editable later via Edit or CSV. |
-| packingNumber | string (optional) | The packing company's own sequential label on the box, entered manually for extra identification. Free text (preserves leading zeros / alphanumeric). Editable on Add Box, Edit, and CSV. Searchable in Unpack. |
+| packingNumber | string (optional) | The packing company's own sequential label on the box, entered manually for extra identification. Free text (preserves leading zeros / alphanumeric). Editable on Add Box, Edit, and CSV. Searchable in Browse. |
 | room | string | Room name, matches a `rooms` document name. |
 | roomColor | string | Hex color, copied from `rooms` at save time. |
 | description | string | AI-summarized, 1-2 sentences. |
@@ -129,24 +128,23 @@ Seed rooms (optional starting set):
 - Form resets after save.
 - Offline behavior: see section 13.
 
-### 6.3 Browse
+### 6.3 Browse (also serves Unpack)
+Browse is the single screen for both browsing while packing and finding a box while unpacking; the former separate Unpack screen has been merged in.
 - Real-time list of all boxes from `boxes`, ordered by boxNumber.
+- Search controls (three separate fields): **box number** (exact), **packing number** (`packingNumber`, exact, case-insensitive), and **contents** (fuzzy text over `description`). Box number and packing number are separate fields on purpose — the two numbering schemes can collide. All search fields and the filters below AND together; empty fields are ignored.
+- Contents search is token-based and tolerant: each query word matches if it equals, contains, or is contained by any description word (bidirectional substring, >=2 chars). This handles plurals (`glass` ↔ `glasses`) and Hebrew attached prefixes (`צלחות` ↔ `וצלחות`) without an LLM or stemmer.
 - Filter controls: by room (multi-select pills — pick one or several rooms, or "All" to clear) and by urgent flag.
 - "Group by room" option: when enabled, the list is split into per-room sections (ordered by `rangeStart`, deleted-room names last) with a color-coded header and box count; otherwise it stays a flat boxNumber-ordered list. Works in both card and table views.
 - Mobile: card per box, color-coded by room.
 - Desktop: table view, same data.
-- Each box has Edit and Delete actions, shown as icons (pencil / trash) for clarity.
+- Each box has Edit and Delete actions, shown as icons (pencil / trash) for clarity. Delete doubles as "unpacked" — deleting a box that has been opened and emptied is the intended unpacking action.
 - Edit opens an inline form, prefilled with current values. The form can also add photos (rear camera or gallery) and remove existing photos on the box, which persist immediately (section 13 — the "type now, add photos later" flow).
 - Delete removes the Firestore document and all files in photoUrls from Storage, after a confirmation prompt. Removing an individual photo also prompts for confirmation.
 - Boxes with a duplicate `boxNumber` within the same room (see section 4.3) are flagged with a warning badge.
 - "Export CSV" button triggers CSV download of the **full dataset**, ignoring any active room/urgent filters (see section 8).
 
-### 6.4 Unpack
-- Two search inputs: (a) box number / packing company's number (`packingNumber`), exact match; (b) **contents text search** over `description`. Either or both can be used; results satisfy all non-empty criteria.
-- Contents search is token-based and tolerant: each query word matches if it equals, contains, or is contained by any description word (bidirectional substring, >=2 chars). This handles plurals (`glass` ↔ `glasses`, `plate` ↔ `plates`) and Hebrew attached prefixes (`צלחות` ↔ `וצלחות`) without an LLM or stemmer.
-- On match, show room, description, urgent flag, and photos. If more than one box matches (shared number per section 4.3, or several boxes hold similar contents), show all matches so the user can disambiguate by room.
-- On no match, show "Box not found" message.
-- Each result has a **Delete** action (trash icon), for the unpacking scenario where a box has been opened and emptied. Prompts for confirmation, then removes the Firestore document and all its Storage photos (same delete path as Browse, section 6.3).
+### 6.4 Unpack — merged into Browse
+The Unpack screen no longer exists as a separate screen; its capabilities (search by box number / packing number / contents, view photos, and delete an emptied box) are part of Browse (section 6.3). Card view shows room, description, urgent flag, and photos for each match.
 
 ### 6.5 Config
 - Room manager: list of rooms with name, color swatch, and number range.
@@ -290,8 +288,8 @@ VITE_LLM_API_KEY=
 12. Seed `rooms` collection with starting rooms, colors, and ranges (section 4.2), or build empty and let Config screen populate it.
 13. Build `Config.tsx`: room manager (add/edit/delete, palette swatch selection for room color + discrete `SwatchGridPicker` (preset grid + hex field, no SV picker) for adding/editing palette colors, range start with auto-suggest and overlap warning), orphaned-photos cleanup (section 6.2/6.5).
 14. Build `AddBox.tsx`: pre-generate `docId` on open, room pills, mic (`he-IL`) + `llm.ts` summary (passthrough until provider chosen), photo upload to `boxPhotos/{docId}/`, urgent toggle, save with automatic box-number assignment (`max+1`, section 4.3), range-overflow warning, and post-save confirmation, mic/photo disabled offline.
-15. Build `Browse.tsx`: real-time list, filters, card/table responsive views, edit/delete, duplicate box-number warning badge, CSV export.
-16. Build `Unpack.tsx`: search by box number, detail view with photos.
+15. Build `Browse.tsx`: real-time list, search (box number / packing number / contents), filters, card/table responsive views, edit/delete (delete = unpacked), duplicate box-number warning badge, CSV export. Absorbs the former Unpack screen.
+16. (Merged into step 15 — no separate Unpack screen.)
 17. Implement CSV export (section 8.1) — always full dataset, filters ignored.
 18. Implement CSV import with confirmation summary (section 8.2).
 19. Write `.github/workflows/deploy.yml`, including the rules-deploy step.

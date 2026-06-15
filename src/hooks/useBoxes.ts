@@ -4,7 +4,7 @@ import { db } from '../firebase'
 import type { BoxDoc } from '../types'
 
 // Real-time boxes list, ordered by boxNumber. Reads from local cache when
-// offline (SPEC 13). Used by Browse, Unpack, and overlap checks in Config.
+// offline (SPEC 13). Used by Browse and overlap checks in Config.
 export function useBoxes() {
   const [boxes, setBoxes] = useState<BoxDoc[]>([])
   const [loading, setLoading] = useState(true)

@@ -11,8 +11,33 @@ import { Lightbox, PhotoThumbs } from './PhotoThumbs'
 import { PencilIcon, TrashIcon } from './icons'
 import type { BoxDoc, RoomDoc } from '../types'
 
-// SPEC 6.3 - Browse. Real-time list, filters, responsive cards/table,
-// edit/delete, duplicate-number badge, full-dataset CSV export.
+// Normalize text for the contents search: lowercase, strip punctuation (keeps
+// Hebrew/Latin letters + digits), split into tokens.
+const tokenize = (s: string) =>
+  s
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .split(/\s+/)
+    .filter(Boolean)
+
+// Tolerant contents match (from the old Unpack screen): every query word must
+// hit some description word - exact, or one contains the other (>=2 chars).
+// Covers plurals (glass/glasses) and Hebrew attached prefixes (צלחות / וצלחות).
+function matchesContent(description: string, query: string): boolean {
+  const q = tokenize(query)
+  if (q.length === 0) return false
+  const d = tokenize(description)
+  return q.every((qt) =>
+    d.some(
+      (dt) =>
+        dt === qt || (qt.length >= 2 && dt.includes(qt)) || (dt.length >= 2 && qt.includes(dt)),
+    ),
+  )
+}
+
+// SPEC 6.3 - Browse (also absorbs the old Unpack search). Real-time list,
+// filters, search by box number / packing number / contents, responsive
+// cards/table, edit/delete, duplicate-number badge, full-dataset CSV export.
 export default function Browse() {
   const { boxes, loading } = useBoxes()
   const { rooms } = useRooms()
@@ -20,18 +45,27 @@ export default function Browse() {
   const [roomSel, setRoomSel] = useState<string[]>([]) // empty = all rooms
   const [urgentOnly, setUrgentOnly] = useState(false)
   const [groupByRoom, setGroupByRoom] = useState(false)
+  const [numQuery, setNumQuery] = useState('') // box number (exact)
+  const [pkgQuery, setPkgQuery] = useState('') // packing number (exact)
+  const [textQuery, setTextQuery] = useState('') // contents (fuzzy)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
   const dupKeys = useMemo(() => duplicateKeys(boxes), [boxes])
 
-  const filtered = useMemo(
-    () =>
-      boxes.filter(
-        (b) => (roomSel.length === 0 || roomSel.includes(b.room)) && (!urgentOnly || b.urgent),
-      ),
-    [boxes, roomSel, urgentOnly],
-  )
+  const filtered = useMemo(() => {
+    const num = numQuery.trim()
+    const pkg = pkgQuery.trim().toLowerCase()
+    const text = textQuery.trim()
+    return boxes.filter(
+      (b) =>
+        (roomSel.length === 0 || roomSel.includes(b.room)) &&
+        (!urgentOnly || b.urgent) &&
+        (num === '' || String(b.boxNumber) === num) &&
+        (pkg === '' || (b.packingNumber ?? '').trim().toLowerCase() === pkg) &&
+        (text === '' || matchesContent(b.description ?? '', text)),
+    )
+  }, [boxes, roomSel, urgentOnly, numQuery, pkgQuery, textQuery])
 
   const toggleRoom = (name: string) =>
     setRoomSel((prev) => (prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]))
@@ -88,6 +122,37 @@ export default function Browse() {
         >
           Export CSV
         </button>
+      </div>
+
+      {/* Search (absorbed from Unpack). Separate box-number and packing-number
+          fields since the two numbering schemes can collide. All criteria AND
+          together and combine with the room/urgent filters below. */}
+      <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+        <input
+          type="text"
+          inputMode="numeric"
+          className="field"
+          placeholder="Box #"
+          value={numQuery}
+          onChange={(e) => setNumQuery(e.target.value)}
+          aria-label="Search by box number"
+        />
+        <input
+          type="text"
+          className="field"
+          placeholder="Packing #"
+          value={pkgQuery}
+          onChange={(e) => setPkgQuery(e.target.value)}
+          aria-label="Search by packing number"
+        />
+        <input
+          type="text"
+          className="field col-span-2 sm:col-span-1"
+          placeholder="Contents (e.g. glass)"
+          value={textQuery}
+          onChange={(e) => setTextQuery(e.target.value)}
+          aria-label="Search by contents"
+        />
       </div>
 
       {/* Filters (SPEC 6.3) - select one or more rooms; none = all. */}

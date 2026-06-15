@@ -1,10 +1,9 @@
 // SPEC 6 / 9 - responsive nav. Bottom tab bar < 768px, top bar >= 768px (CSS).
-export type Screen = 'add' | 'browse' | 'unpack' | 'config'
+export type Screen = 'add' | 'browse' | 'config'
 
 const TABS: { id: Screen; label: string }[] = [
   { id: 'add', label: 'Add Box' },
   { id: 'browse', label: 'Browse' },
-  { id: 'unpack', label: 'Unpack' },
   { id: 'config', label: 'Config' },
 ]
 

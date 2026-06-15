@@ -5,7 +5,6 @@ import Login from './components/Login'
 import Nav, { type Screen } from './components/Nav'
 import AddBox from './components/AddBox'
 import Browse from './components/Browse'
-import Unpack from './components/Unpack'
 import Config from './components/Config'
 
 function OfflineBanner() {
@@ -86,7 +85,6 @@ export default function App() {
       <main className="flex-1 overflow-y-auto pb-16 md:pb-0">
         {screen === 'add' && <AddBox />}
         {screen === 'browse' && <Browse />}
-        {screen === 'unpack' && <Unpack />}
         {screen === 'config' && <Config />}
       </main>
     </div>
