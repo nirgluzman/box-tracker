@@ -226,30 +226,29 @@ export default function AddBox() {
       {/* Photos (SPEC 6.2) */}
       <div className='mb-4'>
         <div className='mb-2 flex flex-wrap items-center gap-3'>
-          {/* Take photo: capture='environment' opens the rear camera. Touch
-              devices only - hidden on laptops, where there's no rear camera and
-              `capture` is ignored (use Gallery there). No `multiple` here -
-              browsers ignore `capture` when `multiple` is also set. */}
-          {isTouch && (
-            <label
-              className={`btn inline-flex items-center gap-2 ${!online || uploading ? 'pointer-events-none opacity-50' : ''}`}>
-              {uploading ? (
-                <>
-                  <Spinner /> Uploading…
-                </>
-              ) : (
-                '📷 Take photo'
-              )}
-              <input
-                type='file'
-                accept='image/*'
-                capture='environment'
-                className='hidden'
-                onChange={handlePhotos}
-                disabled={!online || uploading}
-              />
-            </label>
-          )}
+          {/* Take photo: capture='environment' opens the rear camera. Disabled
+              on laptops (no rear camera, `capture` is ignored there) - use
+              Gallery instead. No `multiple` here - browsers ignore `capture`
+              when `multiple` is also set. */}
+          <label
+            title={!isTouch ? 'Camera not available on this device - use Gallery' : undefined}
+            className={`btn inline-flex items-center gap-2 ${!online || uploading || !isTouch ? 'pointer-events-none opacity-50' : ''}`}>
+            {uploading ? (
+              <>
+                <Spinner /> Uploading…
+              </>
+            ) : (
+              '📷 Take photo'
+            )}
+            <input
+              type='file'
+              accept='image/*'
+              capture='environment'
+              className='hidden'
+              onChange={handlePhotos}
+              disabled={!online || uploading || !isTouch}
+            />
+          </label>
           {/* Gallery: multi-select from existing photos (no camera capture). */}
           <label
             className={`btn inline-flex items-center gap-2 ${!online || uploading ? 'pointer-events-none opacity-50' : ''}`}>

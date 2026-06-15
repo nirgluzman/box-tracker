@@ -482,28 +482,27 @@ function EditForm({ box, rooms, onDone }: { box: BoxDoc; rooms: RoomDoc[]; onDon
           </div>
         )}
         <div className="flex flex-wrap items-center gap-2">
-          {/* Rear-camera capture: touch devices only (hidden on laptops). */}
-          {isTouch && (
-            <label
-              className={`btn inline-flex items-center gap-2 ${!online || uploading ? 'pointer-events-none opacity-50' : ''}`}
-            >
-              {uploading ? (
-                <>
-                  <Spinner /> Uploading…
-                </>
-              ) : (
-                '📷 Take photo'
-              )}
-              <input
-                type="file"
-                accept="image/*"
-                capture="environment"
-                className="hidden"
-                onChange={handleAddPhotos}
-                disabled={!online || uploading}
-              />
-            </label>
-          )}
+          {/* Rear-camera capture: disabled on laptops (use Gallery there). */}
+          <label
+            title={!isTouch ? 'Camera not available on this device - use Gallery' : undefined}
+            className={`btn inline-flex items-center gap-2 ${!online || uploading || !isTouch ? 'pointer-events-none opacity-50' : ''}`}
+          >
+            {uploading ? (
+              <>
+                <Spinner /> Uploading…
+              </>
+            ) : (
+              '📷 Take photo'
+            )}
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={handleAddPhotos}
+              disabled={!online || uploading || !isTouch}
+            />
+          </label>
           <label
             className={`btn inline-flex items-center gap-2 ${!online || uploading ? 'pointer-events-none opacity-50' : ''}`}
           >
