@@ -1,4 +1,6 @@
 import {
+  arrayRemove,
+  arrayUnion,
   collection,
   deleteDoc,
   doc,
@@ -11,7 +13,7 @@ import { db } from '../firebase'
 import type { Box, BoxDoc } from '../types'
 import type { ImportPlan } from './csv'
 import { rangeEnd } from './rooms'
-import { deletePhotoUrls } from './photos'
+import { deletePhotoUrls, uploadBoxPhoto } from './photos'
 
 // Generate a box document id up front (SPEC 6.2) so photos can be stored under
 // boxPhotos/{docId}/ before the document is written.
@@ -41,6 +43,20 @@ export function createBox(docId: string, data: Omit<Box, 'createdAt'>) {
 // Edit an existing box (SPEC 6.3). createdAt is never edited.
 export function updateBox(id: string, patch: Partial<Omit<Box, 'createdAt'>>) {
   return updateDoc(doc(db, 'boxes', id), patch)
+}
+
+// Add a photo to an existing box (SPEC 13 — photos added later via Edit). Uploads
+// to boxPhotos/{id}/ then appends the URL. Needs a connection (upload can't queue).
+export async function addBoxPhoto(boxId: string, file: File): Promise<void> {
+  const { url } = await uploadBoxPhoto(boxId, file)
+  await updateDoc(doc(db, 'boxes', boxId), { photoUrls: arrayUnion(url) })
+}
+
+// Remove one photo from a box: drop the URL first, then delete the Storage file
+// (best-effort; orphan cleanup is the safety net if the file delete fails).
+export async function removeBoxPhoto(boxId: string, url: string): Promise<void> {
+  await updateDoc(doc(db, 'boxes', boxId), { photoUrls: arrayRemove(url) })
+  await deletePhotoUrls([url])
 }
 
 // Delete a box and its Storage photos (SPEC 6.3).

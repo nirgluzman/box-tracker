@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react'
+import { type ChangeEvent, useMemo, useState } from 'react'
 import { useBoxes } from '../hooks/useBoxes'
 import { useRooms } from '../hooks/useRooms'
-import { boxKey, deleteBox, duplicateKeys, updateBox } from '../data/boxes'
+import { useOnline } from '../hooks/useOnline'
+import { addBoxPhoto, boxKey, deleteBox, duplicateKeys, removeBoxPhoto, updateBox } from '../data/boxes'
 import { downloadBoxesCsv } from '../data/csv'
 import { Spinner } from './Spinner'
 import { PhotoThumbs } from './PhotoThumbs'
@@ -250,6 +251,9 @@ function EditForm({ box, rooms, onDone }: { box: BoxDoc; rooms: RoomDoc[]; onDon
   const [description, setDescription] = useState(box.description)
   const [urgent, setUrgent] = useState(box.urgent)
   const [busy, setBusy] = useState(false)
+  const online = useOnline()
+  const [uploading, setUploading] = useState(false)
+  const [removingUrl, setRemovingUrl] = useState<string | null>(null)
 
   async function save() {
     setBusy(true)
@@ -267,6 +271,29 @@ function EditForm({ box, rooms, onDone }: { box: BoxDoc; rooms: RoomDoc[]; onDon
       onDone()
     } finally {
       setBusy(false)
+    }
+  }
+
+  // Photos persist immediately (SPEC 13) — independent of the Save button. The
+  // live snapshot feeds box.photoUrls back in, so the grid updates on its own.
+  async function handleAddPhotos(e: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? [])
+    e.target.value = ''
+    if (files.length === 0) return
+    setUploading(true)
+    try {
+      for (const file of files) await addBoxPhoto(box.id, file)
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  async function removePhoto(url: string) {
+    setRemovingUrl(url)
+    try {
+      await removeBoxPhoto(box.id, url)
+    } finally {
+      setRemovingUrl(null)
     }
   }
 
@@ -314,6 +341,74 @@ function EditForm({ box, rooms, onDone }: { box: BoxDoc; rooms: RoomDoc[]; onDon
         />
         Urgent
       </label>
+
+      {/* Photos — add/remove later (SPEC 13). Persist immediately. */}
+      <div>
+        <span className="mb-1 block text-sm text-muted">Photos</span>
+        {box.photoUrls.length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-2">
+            {box.photoUrls.map((url) => (
+              <div key={url} className="relative">
+                <img
+                  src={url}
+                  alt=""
+                  className="size-16 rounded border border-edge object-cover"
+                />
+                {removingUrl === url ? (
+                  <div className="absolute inset-0 flex items-center justify-center rounded bg-black/50 text-white">
+                    <Spinner />
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => removePhoto(url)}
+                    className="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-danger text-xs text-white"
+                    aria-label="Remove photo"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="flex flex-wrap items-center gap-2">
+          <label
+            className={`btn inline-flex items-center gap-2 ${!online || uploading ? 'pointer-events-none opacity-50' : ''}`}
+          >
+            {uploading ? (
+              <>
+                <Spinner /> Uploading…
+              </>
+            ) : (
+              '📷 Take photo'
+            )}
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={handleAddPhotos}
+              disabled={!online || uploading}
+            />
+          </label>
+          <label
+            className={`btn inline-flex items-center gap-2 ${!online || uploading ? 'pointer-events-none opacity-50' : ''}`}
+          >
+            🖼 Gallery
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              multiple
+              onChange={handleAddPhotos}
+              disabled={!online || uploading}
+            />
+          </label>
+          {!online && <span className="text-xs text-muted">Photos need a connection.</span>}
+        </div>
+      </div>
+
       <div className="flex gap-2">
         <button
           type="button"
