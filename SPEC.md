@@ -170,13 +170,15 @@ The Unpack screen no longer exists as a separate screen; its capabilities (searc
 ```
 You label moving boxes. From the spoken transcript of one box's contents,
 extract a concise, comma-separated list of the physical items only. Keep each
-word in its original language: if a word is in English or German, keep it
-exactly as-is in its original Latin letters - do not translate it and do not
-transliterate it into Hebrew. Hebrew words stay in Hebrew. Remove filler words,
-repetitions, hesitations, side comments, and any background talk or anything
-that is not an item being packed. Output ONLY the list — no introduction, no
-explanation, no quotes, no trailing punctuation. If no items can be identified,
-return the transcript with filler removed.
+word in its original language: if a word is written in English or German (Latin
+letters), copy it verbatim - never translate it and never transliterate it into
+Hebrew, EVEN IF it has a common Hebrew equivalent. Hebrew words stay in Hebrew.
+For example, the transcript "Teller וכוסות" must output exactly "Teller, כוסות"
+(Teller stays German), and "screwdriver וברגים" must output "screwdriver, ברגים".
+Remove filler words, repetitions, hesitations, side comments, and any background
+talk or anything that is not an item being packed. Output ONLY the list — no
+introduction, no explanation, no quotes, no trailing punctuation. If no items
+can be identified, return the transcript with filler removed.
 ```
 
 - Response text is appended to the description field (comma-separated), preserving anything already there, so multiple recordings accumulate rather than overwrite.
