@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Status
 
-Scaffolded and building. Vite project exists under `src/` with all main screens (`Login`, `AddBox`, `Browse`, `Config`, `Nav`). GitHub repo name is `box-tracker` (public); app display name is `BoxBuddy`.
+Built and deployed (live at `box-tracker-81539.web.app`). All main screens implemented (`Login`, `AddBox`, `Browse`, `Config`, `Nav`); CI/CD, rules, and Groq LLM wiring in place. Remaining work is on-device testing (PLAN Phase 11). GitHub repo name is `box-tracker` (public); app display name is `BoxBuddy`.
 
 ## Stack
 
@@ -20,10 +20,11 @@ UI work: use the `frontend-design` plugin for design/component patterns and the 
 
 ## Non-obvious constraints
 
-- **Android-only target.** iOS Safari is not supported (no Web Speech API). Don't add iOS fallbacks. Set `recognition.lang = 'he-IL'` explicitly — there is no "auto".
+- **Android Chrome is the primary target** (box adding: voice, camera, PWA install). **Desktop/laptop Chrome is a supported secondary target** for review/browse/config (table view, popup auth). iOS Safari is not supported (no Web Speech API). Don't add iOS fallbacks. Set `recognition.lang = 'he-IL'` explicitly — there is no "auto".
 - **Firestore offline persistence** uses the modern cache API: `initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) })`. Do NOT use the deprecated `enableIndexedDbPersistence`.
 - **Box numbering** = `max boxNumber in room + 1` (not count), read from local cache so it works offline; first box in a room gets the room's `rangeStart`. Assigned at save time, never reuses deleted numbers. See SPEC 4.3.
 - **CSV export is always the full `boxes` collection**, ignoring active filters — import infers deletions from absent rows, so a filtered export would wrongly delete boxes. See SPEC 8.
 - **Photos** are stored under `boxPhotos/{docId}/` using a client-generated `docId` (`doc(collection(db,'boxes')).id`) created when the Add Box form opens, before the document is written. Handle orphaned-photo cleanup per SPEC 6.2.
 - **Env vars** are `VITE_*` (bundled into public client JS, not secret). Local dev uses `.env.local` (gitignored); CI uses GitHub repo secrets. `llm.ts` runs in passthrough mode until an LLM provider is chosen.
-- **Auth = Google sign-in only**, gated by a `member` custom claim (NOT just `request.auth != null`). Same claim secures Firestore and Storage rules — it's the only check both rule engines can read (Storage can't read Firestore). Grant via `node scripts/setMember.js <email>` (needs a gitignored `serviceAccountKey.json`). Repo is public, so keep all emails/keys out of committed source.
+- **Auth = Google sign-in only**, gated by a `member` custom claim (NOT just `request.auth != null`). Same claim secures Firestore and Storage rules — it's the only check both rule engines can read (Storage can't read Firestore). Grant via `node scripts/setMember.js <email>` / revoke with `--revoke` (needs a gitignored `serviceAccountKey.json`). Repo is public, so keep all emails/keys out of committed source.
+- **Hybrid sign-in flow:** `signInWithPopup` on desktop/laptop, `signInWithRedirect` on Android (`useRedirect = /Android/i.test(navigator.userAgent)` in `Login.tsx`). Desktop redirect silently fails (Chrome storage partitioning drops the result); Android popups are unreliable in the standalone PWA. Do NOT collapse this back to redirect-only. See SPEC 5/6.1 and `docs/auth-flow.md`.

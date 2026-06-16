@@ -6,13 +6,13 @@ GitHub repo name: `box-tracker`. App display name (browser tab, login screen): `
 Track packed moving boxes for a household shipment. Each box gets a number, room, photo, and a short description. Family members add boxes while packing and search by box number while unpacking.
 
 ## 2. Tech Stack
-- Target platform: **Android only** (Chrome on Android). Mic/voice and PWA install are validated on Android; iOS Safari is not a supported target (it lacks Web Speech API support).
+- Target platform: **Android Chrome is primary** — box *adding* (voice, camera, PWA install) is validated there and is the main packing-time device. **Desktop/laptop Chrome is a supported secondary target** for review/browse/config, where the table view and a larger screen are easier (sign-in uses popup there, section 5; responsive layout in section 9). **iOS Safari is not supported** (it lacks Web Speech API support).
 - Vite + React + TypeScript (SPA)
 - Firebase Authentication (Google sign-in only)
 - Firestore (real-time database)
 - Firebase Storage (photos)
 - Web Speech API (voice transcription)
-- LLM API for description summarization — provider TBD (e.g. Gemini 2.0 Flash)
+- LLM API for description summarization — Groq (`llama-3.3-70b-versatile`, section 7)
 - vite-plugin-pwa (service worker, offline support, installable app)
 - GitHub Actions → Firebase Hosting (CI/CD)
 
@@ -20,6 +20,9 @@ Track packed moving boxes for a household shipment. Each box gets a number, room
 ```
 box-tracker/
 ├── .github/workflows/deploy.yml
+├── docs/
+│   ├── architecture.md       # system architecture diagram + component overview
+│   └── auth-flow.md          # Google auth flow + manual one-time setup steps
 ├── scripts/
 │   └── setMember.js          # Admin SDK: grant `member` claim by email (section 5)
 ├── public/
@@ -99,12 +102,12 @@ Seed rooms (optional starting set):
 ## 5. Authentication
 - **Google sign-in only.** No email/password, no in-app passwords. One "Sign in with Google" button (official Google logo + wordmark, per Google's branding guidelines).
 - The 4 members (Nir, Oshra, Idan, Itay) each sign in with their own Google account. On their own phone they stay signed in (auth state persists per device).
-- **Sign-in uses `signInWithRedirect`, not `signInWithPopup`.** The popup flow is blocked by Cross-Origin-Opener-Policy (the `window.closed` COOP error) and is unreliable on Android/PWA standalone; redirect avoids both. The redirect result and the member-claim check are handled centrally on app load (App.tsx), not in the Login component.
+- **Sign-in method is device-dependent (hybrid popup/redirect).** Android (the primary target) uses `signInWithRedirect`, because popups are unreliable in the standalone PWA. Desktop/laptop Chrome uses `signInWithPopup`, because the redirect flow silently fails there (it round-trips but Chrome's storage partitioning loses the result, dropping the user back on Login with no error) - this also covers localhost dev and the shared-laptop case. The branch is `useRedirect = /Android/i.test(navigator.userAgent)` in `Login.tsx`. Either way the member-claim check is handled centrally on app load (App.tsx) via `onAuthStateChanged`; the redirect result is additionally read via `getRedirectResult`.
 - **Shared laptop:** the provider is configured with `setCustomParameters({ prompt: 'select_account' })` so Google always shows the account chooser instead of silently resuming the last user. Combined with the header sign-out button, any of the 4 can sign in on one laptop.
 - **Access control via custom claims (allowlist).** Being signed in with *any* Google account is not enough — the Firestore/Storage rules require a `member` custom claim (section 10). Only the 4 provisioned accounts carry it, so a random Google account is rejected even though `request.auth != null`. This keeps the audience closed without putting any email addresses in the (public) repo.
   - Claims are provisioned with `scripts/setMember.js`, a small Firebase Admin SDK script run once per member: `node scripts/setMember.js <email>`. It looks the user up by email and sets `{ member: true }`. The member must have signed in once first (so the Auth user record exists), then refresh their token (re-sign-in or `getIdToken(true)`) for the claim to take effect.
   - The script authenticates with a service-account JSON key referenced via `GOOGLE_APPLICATION_CREDENTIALS` (or `serviceAccountKey.json` at repo root). The key is **gitignored, never committed** (the repo is public).
-  - To revoke access: `firebase auth` / Admin SDK `setCustomUserClaims(uid, null)` or delete the user in the Console.
+  - To revoke access: `node scripts/setMember.js <email> --revoke` (clears the claim via Admin SDK `setCustomUserClaims(uid, null)`), or delete the user in the Console.
 - All members have equal permissions, no roles (the `member` claim is the only claim).
 - Sign-out button in the app header (visible on every screen once signed in); signing out returns to the Login screen.
 - The header shows the signed-in user's Google **profile photo** in a circle (not the email). `addedBy` on each box still records the user's email for change tracking (section 4.1).
@@ -114,7 +117,7 @@ Seed rooms (optional starting set):
 
 ### 6.1 Login
 - Single "Sign in with Google" button using the official Google logo (per Google branding guidelines), centered under the BoxBuddy title.
-- Uses `signInWithRedirect(auth, googleProvider)` with `prompt: 'select_account'` (section 5). The redirect result is read on return via `getRedirectResult` in App.tsx.
+- Hybrid sign-in with `prompt: 'select_account'` (section 5): `signInWithRedirect` on Android, `signInWithPopup` on desktop/laptop. The redirect result is read on return via `getRedirectResult` in App.tsx; the popup result resolves in-place. Both paths run the member-claim gate through `onAuthStateChanged` in App.tsx.
 - On success, redirect to Add Box screen.
 - On failure (redirect error, network, or a signed-in account without the `member` claim), show inline error message. A non-member is signed back out with a clear "This account isn't authorized to use BoxBuddy" message.
 
@@ -123,7 +126,7 @@ Seed rooms (optional starting set):
 - Room picker: color-coded pills, one per `rooms` document.
 - Mic button starts Web Speech API recognition.
 - Live transcript shown while speaking.
-- On stop, send transcript to the LLM module for summarization (provider TBD, see section 7).
+- On stop, send transcript to the LLM module for summarization (Groq, see section 7).
 - Summary is appended to the description field (never overwrites existing text), editable before save - so the user can dictate in several passes until everything is captured. Appended after the current text, comma-separated.
 - The box's Firestore document ID is generated client-side when the form opens (e.g. `doc(collection(db, 'boxes')).id`), so photos can be stored under a stable path before the document is written.
 - Photo button opens camera or gallery, uploads to Storage under `boxPhotos/{docId}/...`, appends the download URL to photoUrls. The rear-camera "Take photo" button (`capture='environment'`) is enabled on touch devices only (detected via `pointer: coarse`); on laptops/desktops it is shown but disabled/grayed out (with a tooltip), since there is no useful rear camera and `capture` is ignored - "Gallery" upload and voice input remain available there. Same rule applies to the Edit form on Browse.
@@ -266,7 +269,7 @@ VITE_FIREBASE_APP_ID=
 VITE_LLM_API_KEY=
 ```
 
-`.env.example` contains the same keys with empty values, committed to the repo. `VITE_LLM_API_KEY` name and provider TBD (section 7); `llm.ts` can run in passthrough mode without it.
+`.env.example` contains the same keys with empty values, committed to the repo. `VITE_LLM_API_KEY` holds the Groq API key (provider chosen, section 7); `llm.ts` still runs in passthrough mode if it is absent.
 
 ## 12. CI/CD — GitHub Actions
 - Workflow file: `.github/workflows/deploy.yml`.
@@ -297,7 +300,7 @@ VITE_LLM_API_KEY=
 6. Define shared interfaces in `types.ts`: `Box` and `Room`, matching sections 4.1 and 4.2.
 7. Build `firebase.ts`: initialize app, export auth, db, storage instances, enable Firestore offline persistence via `initializeFirestore` + `persistentLocalCache`/`persistentMultipleTabManager` (section 13).
 8. Install and configure `vite-plugin-pwa`: manifest (name, icons, theme color) and service worker with photo runtime caching.
-9. Build `Login.tsx`: "Sign in with Google" button (official logo), `signInWithRedirect` + `prompt: 'select_account'`; redirect result + member-claim check handled in App.tsx (sections 5, 6.1).
+9. Build `Login.tsx`: "Sign in with Google" button (official logo), hybrid `signInWithPopup` (desktop) / `signInWithRedirect` (Android) + `prompt: 'select_account'`; redirect result + member-claim check handled in App.tsx (sections 5, 6.1).
 10. Build `Nav.tsx`: responsive nav, bottom bar on mobile, top bar on desktop. App header shows the BoxBuddy title, the user's Google profile photo in a circle, and a sign-out button (section 5).
 11. Build offline indicator component, shown when `navigator.onLine` is false.
 12. Seed `rooms` collection with starting rooms, colors, and ranges (section 4.2), or build empty and let Config screen populate it.
@@ -318,7 +321,7 @@ VITE_LLM_API_KEY=
 Out of scope for the initial launch (closed 4-user audience, Android-only). Captured here so the decisions aren't lost.
 
 - **Self-service member onboarding.** Today the `member` custom claim is granted manually via `scripts/setMember.js` (section 5). If the user base grows, move provisioning to an admin UI or a Cloud Function (e.g. auto-grant for an allowed email domain on first sign-in).
-- **LLM summarization provider.** `llm.ts` ships in passthrough mode (returns the raw transcript). Choose a provider (e.g. Gemini 2.0 Flash), wire `summarize()`, and restrict the API key by HTTP referrer (section 7 / 10.3). If abuse/cost is a concern, move summarization behind a server-side proxy (e.g. a Cloud Function) so the key never ships to the client.
+- **LLM summarization key exposure.** Provider is **Groq** (`llama-3.3-70b-versatile`), wired in `llm.ts` (passthrough fallback if no key). Groq keys cannot be HTTP-referrer-restricted, so the `VITE_LLM_API_KEY` ships in the public client bundle — accepted for the closed 4-user audience. If abuse/cost becomes a concern, move summarization behind a server-side proxy (e.g. a Cloud Function) so the key never ships to the client (section 7 / 10.3).
 - **iOS support.** Android-only at launch because iOS Safari lacks Web Speech API (section 2). A text-only fallback (no mic) could open the app to iOS.
 - **Bundle size.** The Firebase SDK produces a single large chunk (~600 KB). Consider route-level code-splitting / dynamic imports if load time becomes an issue.
 - **Branded PWA icons.** Launch ships placeholder solid-color icons under `public/icons/`; replace with designed artwork.

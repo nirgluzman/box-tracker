@@ -5,9 +5,10 @@ Tracking checklist for building the app. Source of truth: `SPEC.md`. Check items
 ---
 
 ## Phase 0 — Firebase project setup (console, manual)
-- [x] Create Firebase project; enable Auth (email/password), Firestore, Storage, Hosting
-- [x] Add 4 users manually in Firebase Console (Nir, Oshra, Idan, Itay)
+- [x] Create Firebase project; enable Auth (**Google** sign-in provider), Firestore, Storage, Hosting
+- [x] Each of the 4 members (Nir, Oshra, Idan, Itay) signs in once with Google, then grant the `member` claim via `node scripts/setMember.js <email>` (needs gitignored `serviceAccountKey.json`)
 - [x] Collect Firebase config values (for `.env.local` + GitHub secrets)
+- See [docs/auth-flow.md](./docs/auth-flow.md) for the full manual setup + auth flow.
 
 ## Phase 1 — Scaffold project
 - [x] `npm create vite@latest -- --template react-ts`
@@ -24,13 +25,13 @@ Tracking checklist for building the app. Source of truth: `SPEC.md`. Check items
 - [x] Add PWA icons to `public/icons/` (192, 512) — placeholder solid-color PNGs, replace with branded art
 
 ## Phase 3 — Security rules
-- [x] `firestore.rules` (boxes + rooms: auth != null) — SPEC 10.1
-- [x] `storage.rules` (boxPhotos: auth != null) — SPEC 10.2
+- [x] `firestore.rules` (boxes + rooms + settings: `request.auth.token.member == true`) — SPEC 10.1
+- [x] `storage.rules` (boxPhotos: `request.auth.token.member == true`) — SPEC 10.2
 - [x] `firebase.json` wiring hosting + rules
 
 ## Phase 4 — Shell & navigation
-- [x] `App.tsx`: auth state routing
-- [x] `Login.tsx`: email/password sign-in, disabled Google button, inline errors
+- [x] `App.tsx`: auth state routing + `getRedirectResult` + `member`-claim gate (non-members signed back out)
+- [x] `Login.tsx`: Google sign-in only (official logo), hybrid `signInWithPopup` desktop / `signInWithRedirect` Android, `prompt: 'select_account'`, inline errors
 - [x] `Nav.tsx`: responsive (bottom bar < 768px, top bar ≥ 768px)
 - [x] Offline indicator banner (shown when `navigator.onLine` false)
 
@@ -64,14 +65,14 @@ Tracking checklist for building the app. Source of truth: `SPEC.md`. Check items
 - [x] Duplicate boxNumber warning badge (same number, same room)
 - [x] Export CSV button (full dataset)
 
-## Phase 8 — Unpack
+## Phase 8 — Unpack (merged into Browse, SPEC 6.4)
 - [x] Search by box number
 - [x] Match → room, description, urgent, photos (show all on multi-match)
 - [x] No match → "Box not found"
 
 ## Phase 9 — CSV
 - [x] Export: full `boxes` collection (ignore filters), UTF-8 + BOM — `data/csv.ts`, wired to Browse
-  - [x] Columns: `Box Number, Room, Description, Urgent, Added By, Date Added, _docId`
+  - [x] Columns: `Box Number, Packing Number, Room, Description, Urgent, Added By, Date Added, _docId`
 - [x] Import: parse, match by `_docId` — `data/csv.ts` (parseCsv/csvToRecords/planImport) + `applyImportPlan`
   - [x] Existing → update fields (leave photoUrls); empty `_docId` → create
   - [x] Absent `_docId` → mark delete (also remove Storage files)

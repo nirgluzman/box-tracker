@@ -13,15 +13,22 @@ A small PWA for tracking packed moving boxes during a household shipment. Each b
 
 ## Context
 
-- **Target platform:** Android (Chrome) only. iOS Safari is not supported (no Web Speech API).
-- **Audience:** a closed set of 4 family users, equal permissions, accounts created manually in the Firebase Console.
-- **Stack:** Vite + React + TypeScript SPA · Firebase Auth / Firestore / Storage / Hosting · `vite-plugin-pwa` · Web Speech API · LLM summarization (provider TBD) · GitHub Actions → Firebase Hosting CI/CD.
+- **Target platform:** Android Chrome is primary (box adding: voice, camera, PWA install); desktop/laptop Chrome is a supported secondary target for review/browse/config. iOS Safari is not supported (no Web Speech API).
+- **Audience:** a closed set of 4 family users, equal permissions. Access is Google sign-in only, gated by a `member` custom claim granted per account via `scripts/setMember.js` (not just being signed in).
+- **Stack:** Vite + React + TypeScript SPA · Firebase Auth (Google) / Firestore / Storage / Hosting · `vite-plugin-pwa` · Web Speech API · Groq LLM summarization (`llama-3.3-70b-versatile`) · GitHub Actions → Firebase Hosting CI/CD.
 
 The complete specification lives in [SPEC.md](./SPEC.md) — the authoritative source for data model, screens, numbering scheme, CSV import/export, security rules, and the build checklist.
 
+## Documentation
+
+- [SPEC.md](./SPEC.md) — authoritative product/technical spec.
+- [PLAN.md](./PLAN.md) — build checklist and progress.
+- [docs/architecture.md](./docs/architecture.md) — system architecture diagram and component overview.
+- [docs/auth-flow.md](./docs/auth-flow.md) — Google authentication flow plus the manual one-time setup steps (Firebase console, `member` claim).
+
 ## Status
 
-Greenfield — spec'd but not yet scaffolded. Run the `/scaffold` skill (see below) to bootstrap the project.
+Built and deployed — live at [box-tracker-81539.web.app](https://box-tracker-81539.web.app). All screens, CI/CD, security rules, and Groq summarization are in place; remaining work is on-device testing (see [PLAN.md](./PLAN.md) Phase 11).
 
 ## Built with Claude Code
 
