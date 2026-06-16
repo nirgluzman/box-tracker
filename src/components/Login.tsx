@@ -10,6 +10,38 @@ import { auth, googleProvider } from '../firebase'
 // so redirect is used per SPEC 6.1. Result + member gate handled in App.tsx.
 const useRedirect = /Android/i.test(navigator.userAgent)
 
+// Packing illustration: a stack of taped moving boxes, the top one sealed with
+// brand-accent tape and a shipping label. Inline SVG (like GoogleLogo) so it
+// needs no asset/network and inherits the dark theme.
+function PackingBoxes() {
+  return (
+    <svg
+      viewBox="0 0 220 180"
+      width="176"
+      height="144"
+      role="img"
+      aria-label="A stack of packed moving boxes"
+      strokeLinejoin="round"
+      strokeLinecap="round"
+    >
+      {/* bottom-left box */}
+      <rect x="20" y="86" width="84" height="80" rx="6" fill="#d2a679" stroke="#8a6240" strokeWidth="3" />
+      <path d="M20 104 H104" stroke="#8a6240" strokeWidth="3" />
+      <path d="M62 86 V166" stroke="#b07a45" strokeWidth="4" />
+      {/* bottom-right box */}
+      <rect x="116" y="86" width="84" height="80" rx="6" fill="#c2925f" stroke="#8a6240" strokeWidth="3" />
+      <path d="M116 104 H200" stroke="#8a6240" strokeWidth="3" />
+      <path d="M158 86 V166" stroke="#9c6a3c" strokeWidth="4" />
+      {/* top box, sealed with brand-accent tape + label */}
+      <rect x="66" y="18" width="88" height="74" rx="6" fill="#e6bd8e" stroke="#8a6240" strokeWidth="3" />
+      <path d="M66 36 H154" stroke="#8a6240" strokeWidth="3" />
+      <path d="M110 18 V92" stroke="#2563eb" strokeWidth="5" />
+      <rect x="84" y="50" width="52" height="26" rx="3" fill="#fdf6ec" stroke="#c9a06a" strokeWidth="2" />
+      <path d="M92 60 H128 M92 67 H118" stroke="#b9a07f" strokeWidth="2.5" />
+    </svg>
+  )
+}
+
 // Official Google "G" mark (per Google branding guidelines).
 function GoogleLogo() {
   return (
@@ -68,13 +100,16 @@ export default function Login({ error }: { error?: string }) {
   const message = localError || error
 
   return (
-    <div className="flex flex-col items-center gap-6 p-12">
-      <h1 className="text-3xl font-bold text-accent">BoxBuddy</h1>
+    // Boxes illustration on top, extra space (mt-10) before the title, then the
+    // sign-in button. Starts a bit above the middle (pt-[10vh]).
+    <div className="flex min-h-[100svh] flex-col items-center gap-7 p-8 pt-[10vh]">
+      <PackingBoxes />
+      <h1 className="mt-10 text-6xl font-extrabold tracking-tight text-accent">BoxBuddy</h1>
       <button
         type="button"
         onClick={handleSignIn}
         disabled={busy}
-        className="flex items-center gap-3 rounded-md border border-edge bg-white px-5 py-2.5 text-sm font-medium text-[#1f1f1f] shadow-sm transition-colors hover:bg-gray-50 disabled:opacity-60"
+        className="mt-6 flex items-center gap-3 rounded-md border border-edge bg-white px-5 py-2.5 text-sm font-medium text-[#1f1f1f] shadow-sm transition-colors hover:bg-gray-50 disabled:opacity-60"
       >
         <GoogleLogo />
         {busy ? 'Redirecting…' : 'Sign in with Google'}
