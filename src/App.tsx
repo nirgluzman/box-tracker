@@ -95,20 +95,39 @@ export default function App() {
     })
   }, [])
 
-  // Sync screen with browser history so the Android back button moves between
-  // screens instead of leaving the app. Each nav pushes a new entry.
+  // Mirror the current screen into window.history so the Android back button
+  // moves between screens (each navigate() pushes an entry) instead of leaving
+  // the app on the first press.
   //
-  // In the installed PWA there is no URL bar, so a back press past our first
-  // screen would exit the app entirely and force a re-auth + re-sync on
-  // relaunch (bad UX). To prevent that we seed a `guard` entry below the root
-  // (standalone only): the back button still moves between screens, but once it
-  // reaches the first screen further back presses land on the guard and are
-  // absorbed (re-pinned) instead of leaving the app. In a normal browser tab we
-  // skip the trap so back behaves normally.
+  // BACK-BUTTON TRAP (installed PWA only):
+  // In an installed PWA there is no URL bar, so once back reaches the very first
+  // history entry the next press EXITS the app, tearing down auth + Firestore
+  // sync and forcing a re-auth/re-sync on relaunch (bad UX, reported by users).
+  // To prevent the app from closing we seed a sentinel `guard` entry *below* the
+  // root screen, so the history stack starts as:
+  //
+  //   index 0: { guard: true }   <- sentinel, never displayed
+  //   index 1: { screen: 'add' } <- first visible screen (the user starts here)
+  //
+  // Back from any screen walks down to the 'add' screen as normal; one more back
+  // lands on the guard entry (index 0), whose popstate handler immediately
+  // pushes a fresh 'add' entry back on top. Net effect: the back press at the
+  // first screen is swallowed and the app stays open instead of closing.
+  //
+  // Only armed when "installed" (launched without a URL bar). In a normal
+  // browser tab the guard is skipped so back behaves normally. We test several
+  // display modes because matchMedia('standalone') alone misses minimal-ui /
+  // fullscreen installs and iOS home-screen (navigator.standalone) - missing any
+  // of those would leave the guard unseeded and the app would close on back.
   useEffect(() => {
     if (!user) return
-    const standalone = window.matchMedia('(display-mode: standalone)').matches
-    if (standalone) {
+    const installed =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      window.matchMedia('(display-mode: minimal-ui)').matches ||
+      window.matchMedia('(display-mode: fullscreen)').matches ||
+      (navigator as { standalone?: boolean }).standalone === true
+    if (installed) {
+      // Seed the guard sentinel below the first screen (see stack diagram above).
       window.history.replaceState({ screen: 'add', guard: true }, '')
       window.history.pushState({ screen: 'add' }, '')
     } else {
@@ -116,8 +135,8 @@ export default function App() {
     }
     const onPop = (e: PopStateEvent) => {
       if (e.state?.guard) {
-        // Bottom of our stack in the PWA: re-pin the first screen so the back
-        // press is swallowed and the app stays open.
+        // Reached the guard sentinel: re-pin the first screen so the back press
+        // is swallowed and the installed PWA stays open instead of exiting.
         window.history.pushState({ screen: 'add' }, '')
         setScreen('add')
         return
