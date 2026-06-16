@@ -103,16 +103,12 @@ export default function App() {
   // In an installed PWA there is no URL bar, so once back reaches the very first
   // history entry the next press EXITS the app, tearing down auth + Firestore
   // sync and forcing a re-auth/re-sync on relaunch (bad UX, reported by users).
-  // To prevent the app from closing we seed a sentinel `guard` entry *below* the
-  // root screen, so the history stack starts as:
-  //
-  //   index 0: { guard: true }   <- sentinel, never displayed
-  //   index 1: { screen: 'add' } <- first visible screen (the user starts here)
-  //
-  // Back from any screen walks down to the 'add' screen as normal; one more back
-  // lands on the guard entry (index 0), whose popstate handler immediately
-  // pushes a fresh 'add' entry back on top. Net effect: the back press at the
-  // first screen is swallowed and the app stays open instead of closing.
+  // To prevent the app from closing we seed a buffer of `guard` entries *below*
+  // the root screen and rebuild it on every guard pop (see the diagram and the
+  // rapid-click rationale on seedGuards() below). Back from any screen walks down
+  // to the 'add' screen as normal; one more back lands on a guard entry, whose
+  // popstate handler rebuilds the buffer and re-pins 'add' on top. Net effect:
+  // the back press at the first screen is swallowed and the app stays open.
   //
   // Only armed when "installed" (launched without a URL bar). In a normal
   // browser tab the guard is skipped so back behaves normally. We test several
@@ -126,18 +122,35 @@ export default function App() {
       window.matchMedia('(display-mode: minimal-ui)').matches ||
       window.matchMedia('(display-mode: fullscreen)').matches ||
       (navigator as { standalone?: boolean }).standalone === true
-    if (installed) {
-      // Seed the guard sentinel below the first screen (see stack diagram above).
+    // A single guard sentinel can be OUTRUN by rapid back-presses: the browser
+    // pops several history entries before our async popstate handler re-pins the
+    // app, so mashing back from the first screen drops below the stack and exits.
+    // Instead we keep a BUFFER of guard entries below the first screen and rebuild
+    // the full buffer on every guard pop, so it self-heals faster than a human can
+    // click. Stack while installed:
+    //
+    //   index 0..N-1: { guard: true }   <- buffer, never displayed
+    //   index N:      { screen: 'add' } <- first visible screen
+    const GUARD_DEPTH = 3
+    const seedGuards = () => {
+      // replaceState the current entry, then stack the rest. Called on mount and on
+      // every guard pop, so wherever a rapid back-burst left us, we rebuild the full
+      // buffer + first screen on top (pushState truncates any forward entries).
       window.history.replaceState({ screen: 'add', guard: true }, '')
+      for (let i = 1; i < GUARD_DEPTH; i++) window.history.pushState({ screen: 'add', guard: true }, '')
       window.history.pushState({ screen: 'add' }, '')
+    }
+    if (installed) {
+      seedGuards()
     } else {
       window.history.replaceState({ screen: 'add' }, '')
     }
     const onPop = (e: PopStateEvent) => {
       if (e.state?.guard) {
-        // Reached the guard sentinel: re-pin the first screen so the back press
-        // is swallowed and the installed PWA stays open instead of exiting.
-        window.history.pushState({ screen: 'add' }, '')
+        // Back reached the guard buffer (i.e. went below the first screen): rebuild
+        // the buffer and pin the first screen so the press is swallowed and the
+        // installed PWA stays open instead of exiting.
+        seedGuards()
         setScreen('add')
         return
       }
