@@ -22,7 +22,8 @@ box-tracker/
 ├── .github/workflows/deploy.yml
 ├── docs/
 │   ├── architecture.md       # system architecture diagram + component overview
-│   └── auth-flow.md          # Google auth flow + manual one-time setup steps
+│   ├── auth-flow.md          # Google auth flow + manual one-time setup steps
+│   └── adding-a-member.md    # runbook: service-account key + grant/revoke a member
 ├── scripts/
 │   └── setMember.js          # Admin SDK: grant `member` claim by email (section 5)
 ├── public/
@@ -106,7 +107,7 @@ Seed rooms (optional starting set):
 - **Shared laptop:** the provider is configured with `setCustomParameters({ prompt: 'select_account' })` so Google always shows the account chooser instead of silently resuming the last user. Combined with the header sign-out button, any of the 4 can sign in on one laptop.
 - **Access control via custom claims (allowlist).** Being signed in with *any* Google account is not enough — the Firestore/Storage rules require a `member` custom claim (section 10). Only the 4 provisioned accounts carry it, so a random Google account is rejected even though `request.auth != null`. This keeps the audience closed without putting any email addresses in the (public) repo.
   - Claims are provisioned with `scripts/setMember.js`, a small Firebase Admin SDK script run once per member: `node scripts/setMember.js <email>`. It looks the user up by email and sets `{ member: true }`. The member must have signed in once first (so the Auth user record exists), then refresh their token (re-sign-in or `getIdToken(true)`) for the claim to take effect.
-  - The script authenticates with a service-account JSON key referenced via `GOOGLE_APPLICATION_CREDENTIALS` (or `serviceAccountKey.json` at repo root). The key is **gitignored, never committed** (the repo is public).
+  - The script authenticates with a service-account JSON key referenced via `GOOGLE_APPLICATION_CREDENTIALS` (or `serviceAccountKey.json` at repo root). The key is **gitignored, never committed** (the repo is public). Generating that key and the full add/revoke runbook are in [docs/adding-a-member.md](docs/adding-a-member.md).
   - To revoke access: `node scripts/setMember.js <email> --revoke` (clears the claim via Admin SDK `setCustomUserClaims(uid, null)`), or delete the user in the Console.
 - All members have equal permissions, no roles (the `member` claim is the only claim).
 - Sign-out button in the app header (visible on every screen once signed in); signing out returns to the Login screen.
@@ -294,7 +295,7 @@ VITE_LLM_API_KEY=
 
 ## 14. Build Checklist
 1. Create Firebase project, enable Auth (**Google** sign-in provider), Firestore, Storage, Hosting. Add the OAuth support email and authorized domains (Hosting domain auto-added; add `localhost` for dev).
-2. Each of the 4 members signs in once with Google (creates their Auth user record), then grant the `member` claim: `node scripts/setMember.js <email>` per member (needs a service-account key, gitignored). Members re-sign-in to pick up the claim.
+2. Each of the 4 members signs in once with Google (creates their Auth user record), then grant the `member` claim: `node scripts/setMember.js <email>` per member (needs a service-account key, gitignored). Members re-sign-in to pick up the claim. Full runbook (incl. generating the service-account key): [docs/adding-a-member.md](docs/adding-a-member.md).
 3. Write `firestore.rules` and `storage.rules` in the repo, gated on `request.auth.token.member == true` (section 10).
 4. (Deferred) Once an LLM provider is chosen, restrict its API key by HTTP referrer (section 7).
 5. Scaffold Vite + React + TypeScript project (`npm create vite@latest -- --template react-ts`), install firebase SDK.

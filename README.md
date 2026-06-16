@@ -25,6 +25,7 @@ The complete specification lives in [SPEC.md](./SPEC.md) — the authoritative s
 - [PLAN.md](./PLAN.md) — build checklist and progress.
 - [docs/architecture.md](./docs/architecture.md) — system architecture diagram and component overview.
 - [docs/auth-flow.md](./docs/auth-flow.md) — Google authentication flow plus the manual one-time setup steps (Firebase console, `member` claim).
+- [docs/adding-a-member.md](./docs/adding-a-member.md) — runbook for granting/revoking access for a Google account (service-account key + `setMember.js`).
 
 ## Status
 
