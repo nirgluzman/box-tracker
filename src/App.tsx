@@ -96,12 +96,32 @@ export default function App() {
   }, [])
 
   // Sync screen with browser history so the Android back button moves between
-  // screens instead of leaving the app. The seed entry is set when auth becomes
-  // ready (the app shell first renders); each nav pushes a new entry.
+  // screens instead of leaving the app. Each nav pushes a new entry.
+  //
+  // In the installed PWA there is no URL bar, so a back press past our first
+  // screen would exit the app entirely and force a re-auth + re-sync on
+  // relaunch (bad UX). To prevent that we seed a `guard` entry below the root
+  // (standalone only): the back button still moves between screens, but once it
+  // reaches the first screen further back presses land on the guard and are
+  // absorbed (re-pinned) instead of leaving the app. In a normal browser tab we
+  // skip the trap so back behaves normally.
   useEffect(() => {
     if (!user) return
-    window.history.replaceState({ screen: 'add' }, '')
+    const standalone = window.matchMedia('(display-mode: standalone)').matches
+    if (standalone) {
+      window.history.replaceState({ screen: 'add', guard: true }, '')
+      window.history.pushState({ screen: 'add' }, '')
+    } else {
+      window.history.replaceState({ screen: 'add' }, '')
+    }
     const onPop = (e: PopStateEvent) => {
+      if (e.state?.guard) {
+        // Bottom of our stack in the PWA: re-pin the first screen so the back
+        // press is swallowed and the app stays open.
+        window.history.pushState({ screen: 'add' }, '')
+        setScreen('add')
+        return
+      }
       const s = (e.state?.screen as Screen) ?? 'add'
       setScreen(s)
     }

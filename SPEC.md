@@ -285,6 +285,7 @@ VITE_LLM_API_KEY=
 - Runtime caching: Firebase Storage photo URLs cached with a cache-first strategy, so previously viewed photos stay visible offline.
 - Firestore offline persistence enabled in `firebase.ts` via the modern cache API (`enableIndexedDbPersistence` is deprecated). Use `initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) })`. `persistentMultipleTabManager` avoids the single-tab failure of the old API. Reads return cached data when offline. Writes queue locally and sync automatically once reconnected.
 - Offline indicator: small banner shown when `navigator.onLine` is false, e.g. "Offline — changes will sync when reconnected".
+- Back-button handling: navigation is mirrored into `history` so the Android back button moves between screens. In the installed PWA (`display-mode: standalone`, no URL bar) a `guard` history entry is seeded below the root so that, once back reaches the first screen, further back presses are absorbed instead of exiting the app — exiting would drop auth state and force a re-auth/re-sync on relaunch. In a normal browser tab the trap is skipped and back behaves normally. Implemented in `App.tsx`.
 - Add Box screen when offline:
   - Box number, room, description (typed manually), and urgent flag save normally, queued by Firestore.
   - Mic button disabled, with a note that voice input needs a connection.
