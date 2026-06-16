@@ -8,11 +8,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Status
 
-Greenfield — not yet scaffolded. No `package.json`/`src/` until the Vite project is created (see `/scaffold` or SPEC section 14). GitHub repo name is `box-tracker`; app display name is `BoxBuddy`.
+Scaffolded and building. Vite project exists under `src/` with all main screens (`Login`, `AddBox`, `Browse`, `Config`, `Nav`). GitHub repo name is `box-tracker` (public); app display name is `BoxBuddy`.
 
 ## Stack
 
-Vite + React + TypeScript SPA. Firebase Auth (email/password), Firestore, Storage, Hosting. `vite-plugin-pwa`. Web Speech API for voice. CI/CD via GitHub Actions → Firebase Hosting on push to `main`.
+Vite + React + TypeScript SPA. Firebase Auth (Google sign-in only), Firestore, Storage, Hosting. `vite-plugin-pwa`. Web Speech API for voice. CI/CD via GitHub Actions → Firebase Hosting on push to `main`.
 
 ## Tooling
 
@@ -26,3 +26,4 @@ UI work: use the `frontend-design` plugin for design/component patterns and the 
 - **CSV export is always the full `boxes` collection**, ignoring active filters — import infers deletions from absent rows, so a filtered export would wrongly delete boxes. See SPEC 8.
 - **Photos** are stored under `boxPhotos/{docId}/` using a client-generated `docId` (`doc(collection(db,'boxes')).id`) created when the Add Box form opens, before the document is written. Handle orphaned-photo cleanup per SPEC 6.2.
 - **Env vars** are `VITE_*` (bundled into public client JS, not secret). Local dev uses `.env.local` (gitignored); CI uses GitHub repo secrets. `llm.ts` runs in passthrough mode until an LLM provider is chosen.
+- **Auth = Google sign-in only**, gated by a `member` custom claim (NOT just `request.auth != null`). Same claim secures Firestore and Storage rules — it's the only check both rule engines can read (Storage can't read Firestore). Grant via `node scripts/setMember.js <email>` (needs a gitignored `serviceAccountKey.json`). Repo is public, so keep all emails/keys out of committed source.

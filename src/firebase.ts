@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app'
-import { getAuth } from 'firebase/auth'
+import { getAuth, GoogleAuthProvider } from 'firebase/auth'
 import {
   initializeFirestore,
   persistentLocalCache,
@@ -19,6 +19,11 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig)
 
 export const auth = getAuth(app)
+
+// Google sign-in only (SPEC 5). Always show the account chooser so a shared
+// laptop can switch between members instead of silently resuming the last one.
+export const googleProvider = new GoogleAuthProvider()
+googleProvider.setCustomParameters({ prompt: 'select_account' })
 
 // Offline persistence via the modern cache API (SPEC 13).
 // Do NOT use the deprecated enableIndexedDbPersistence.

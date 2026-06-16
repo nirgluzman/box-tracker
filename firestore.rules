@@ -1,15 +1,17 @@
 rules_version = '2';
 
+// Access gated by the `member` custom claim (SPEC 5/10), granted via
+// scripts/setMember.js. Being signed in with any Google account is not enough.
 service cloud.firestore {
   match /databases/{database}/documents {
     match /boxes/{box} {
-      allow read, write: if request.auth != null;
+      allow read, write: if request.auth.token.member == true;
     }
     match /rooms/{room} {
-      allow read, write: if request.auth != null;
+      allow read, write: if request.auth.token.member == true;
     }
     match /settings/{doc} {
-      allow read, write: if request.auth != null;
+      allow read, write: if request.auth.token.member == true;
     }
   }
 }

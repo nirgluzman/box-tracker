@@ -13,3 +13,6 @@ dist/
 .firebase/
 firebase-debug.log
 *-debug.log
+
+# Service-account key for scripts/setMember.js - NEVER commit (repo is public)
+serviceAccountKey.json

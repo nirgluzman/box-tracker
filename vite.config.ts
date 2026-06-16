@@ -38,6 +38,11 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico}'],
+        // Don't let the SPA navigation fallback shadow Firebase's reserved
+        // auth helper paths (/__/auth/handler, /__/firebase/...). Without this
+        // the Google sign-in popup loads index.html instead of the OAuth
+        // handler, so the popup shows our own app instead of Google.
+        navigateFallbackDenylist: [/^\/__\//],
         runtimeCaching: [
           {
             // Firebase Storage photo URLs — cache-first so viewed photos stay offline (SPEC 13).

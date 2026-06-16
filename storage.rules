@@ -1,9 +1,11 @@
 rules_version = '2';
 
+// Storage rules cannot read Firestore, so the same `member` custom claim
+// (SPEC 5/10) gates photos as gates the database.
 service firebase.storage {
   match /b/{bucket}/o {
     match /boxPhotos/{allPaths=**} {
-      allow read, write: if request.auth != null;
+      allow read, write: if request.auth.token.member == true;
     }
   }
 }
