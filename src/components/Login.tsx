@@ -2,13 +2,13 @@ import { useState } from 'react'
 import { signInWithRedirect, signInWithPopup } from 'firebase/auth'
 import { auth, googleProvider } from '../firebase'
 
-// On localhost the redirect flow breaks: it stashes state on the authDomain
-// origin and Chrome's third-party storage partitioning blocks reading it back
-// on localhost, so the sign-in silently never completes. Popup works on
-// localhost (Google whitelists it, and no service worker runs in `vite dev`).
-// Deployed, redirect is used per SPEC 6.1 (reliable on Android/PWA).
-const isLocalhost =
-  location.hostname === 'localhost' || location.hostname === '127.0.0.1'
+// Sign-in method depends on the device. On desktop/laptop Chrome the redirect
+// flow silently fails (it round-trips but Chrome's storage partitioning loses
+// the result, leaving the user back on login with no error) - this hits both
+// localhost dev and the shared-laptop case (SPEC 5). Popup is reliable there.
+// On Android (the primary target) popups are unreliable in the standalone PWA,
+// so redirect is used per SPEC 6.1. Result + member gate handled in App.tsx.
+const useRedirect = /Android/i.test(navigator.userAgent)
 
 // Official Google "G" mark (per Google branding guidelines).
 function GoogleLogo() {
@@ -34,9 +34,9 @@ function GoogleLogo() {
   )
 }
 
-// SPEC 6.1 - Google sign-in only via redirect (popup breaks under COOP and on
-// Android/PWA). The member-claim gate and the result of the redirect are handled
-// centrally in App.tsx; `error` carries any message back to this screen.
+// SPEC 6.1 - Google sign-in only. Popup on desktop/laptop, redirect on Android
+// (see useRedirect above). The member-claim gate and the redirect result are
+// handled centrally in App.tsx; `error` carries any message back to this screen.
 export default function Login({ error }: { error?: string }) {
   const [busy, setBusy] = useState(false)
   const [localError, setLocalError] = useState('')
@@ -45,15 +45,15 @@ export default function Login({ error }: { error?: string }) {
     setBusy(true)
     setLocalError('')
     try {
-      if (isLocalhost) {
+      if (useRedirect) {
+        await signInWithRedirect(auth, googleProvider)
+        // Page navigates to Google; result is picked up on return in App.tsx.
+      } else {
         // Popup resolves here; the member-claim gate runs in App.tsx via
         // onAuthStateChanged (fires for popup sign-ins too). Reset busy since
         // the page doesn't navigate away (a rejected non-member stays here).
         await signInWithPopup(auth, googleProvider)
         setBusy(false)
-      } else {
-        await signInWithRedirect(auth, googleProvider)
-        // Page navigates to Google; result is picked up on return in App.tsx.
       }
     } catch (e) {
       // Ignore the user simply closing the popup.
