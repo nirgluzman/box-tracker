@@ -1,6 +1,6 @@
-# BoxBuddy — Architecture
+# BoxIndex — Architecture
 
-System overview for the BoxBuddy PWA. See [SPEC.md](../SPEC.md) for the authoritative
+System overview for the BoxIndex PWA. See [SPEC.md](../SPEC.md) for the authoritative
 detail and [auth-flow.md](./auth-flow.md) for the Google sign-in flow and manual setup.
 
 ## High-level architecture

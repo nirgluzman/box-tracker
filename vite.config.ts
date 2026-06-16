@@ -17,8 +17,8 @@ export default defineConfig({
         'icons/icon-512-maskable.png',
       ],
       manifest: {
-        name: 'BoxBuddy',
-        short_name: 'BoxBuddy',
+        name: 'BoxIndex',
+        short_name: 'BoxIndex',
         description: 'Track packed moving boxes for a household shipment.',
         theme_color: '#2563eb',
         background_color: '#0d1420',

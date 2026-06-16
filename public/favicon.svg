@@ -32,7 +32,7 @@
   <path d="M236 168 L256 178 L276 168 L296 178 L276 188 L256 198 L236 188 L216 178 Z"
         fill="#f7eede" opacity="0.7"/>
 
-  <!-- buddy badge: white sticker with a big blue B -->
+  <!-- badge: white sticker with a big blue B -->
   <circle cx="256" cy="315" r="80" fill="#ffffff"/>
   <text x="256" y="315" text-anchor="middle" dominant-baseline="central"
         font-family="system-ui, 'Segoe UI', Roboto, sans-serif" font-weight="800"

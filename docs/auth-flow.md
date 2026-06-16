@@ -1,4 +1,4 @@
-# BoxBuddy — Authentication
+# BoxIndex — Authentication
 
 Google sign-in only, gated by a `member` custom claim. See [SPEC.md](../SPEC.md) sections 5, 6.1, and 10.
 
@@ -61,7 +61,7 @@ sequenceDiagram
     A->>A: setUser(user) → route to Add Box
   else missing claim
     A->>FB: signOut()
-    A->>L: show "This account isn't authorized to use BoxBuddy."
+    A->>L: show "This account isn't authorized to use BoxIndex."
   end
 ```
 

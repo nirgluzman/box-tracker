@@ -104,7 +104,7 @@ export default function Login({ error }: { error?: string }) {
     // sign-in button. Starts a bit above the middle (pt-[10vh]).
     <div className="flex min-h-[100svh] flex-col items-center gap-7 p-8 pt-[10vh]">
       <PackingBoxes />
-      <h1 className="mt-10 text-6xl font-extrabold tracking-tight text-accent">BoxBuddy</h1>
+      <h1 className="mt-10 text-6xl font-extrabold tracking-tight text-accent">BoxIndex</h1>
       <button
         type="button"
         onClick={handleSignIn}

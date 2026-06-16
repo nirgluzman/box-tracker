@@ -1,6 +1,6 @@
 # Adding a member (granting access to a new Google account)
 
-Operational runbook for letting a new Google/Gmail account use BoxBuddy. Access is
+Operational runbook for letting a new Google/Gmail account use BoxIndex. Access is
 **not** automatic on sign-in — every account must be granted the `member` custom claim
 that the Firestore/Storage rules require (see [SPEC.md](../SPEC.md) sections 5 and 10,
 and [auth-flow.md](./auth-flow.md) for the full flow).
@@ -41,7 +41,7 @@ private key. The key file (`serviceAccountKey.json`) is **gitignored and never c
 1. **The new account signs in once.** Have the person open the app
    ([box-tracker-81539.web.app](https://box-tracker-81539.web.app)) and complete the
    Google sign-in with the account you want to add. They will be signed straight back out
-   with "This account isn't authorized to use BoxBuddy" — that is expected, and it creates
+   with "This account isn't authorized to use BoxIndex" — that is expected, and it creates
    the Firebase Auth user record the next step needs.
 
 2. **Grant the claim** from the repo root:

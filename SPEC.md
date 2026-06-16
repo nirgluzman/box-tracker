@@ -1,6 +1,6 @@
-# BoxBuddy — Project Spec
+# BoxIndex — Project Spec
 
-GitHub repo name: `box-tracker`. App display name (browser tab, login screen): `BoxBuddy`.
+GitHub repo name: `box-tracker`. App display name (browser tab, login screen): `BoxIndex`.
 
 ## 1. Purpose
 Track packed moving boxes for a household shipment. Each box gets a number, room, photo, and a short description. Family members add boxes while packing and search by box number while unpacking.
@@ -117,10 +117,10 @@ Seed rooms (optional starting set):
 ## 6. Screens
 
 ### 6.1 Login
-- Single "Sign in with Google" button using the official Google logo (per Google branding guidelines), centered under the BoxBuddy title.
+- Single "Sign in with Google" button using the official Google logo (per Google branding guidelines), centered under the BoxIndex title.
 - Hybrid sign-in with `prompt: 'select_account'` (section 5): `signInWithRedirect` on Android, `signInWithPopup` on desktop/laptop. The redirect result is read on return via `getRedirectResult` in App.tsx; the popup result resolves in-place. Both paths run the member-claim gate through `onAuthStateChanged` in App.tsx.
 - On success, redirect to Add Box screen.
-- On failure (redirect error, network, or a signed-in account without the `member` claim), show inline error message. A non-member is signed back out with a clear "This account isn't authorized to use BoxBuddy" message.
+- On failure (redirect error, network, or a signed-in account without the `member` claim), show inline error message. A non-member is signed back out with a clear "This account isn't authorized to use BoxIndex" message.
 
 ### 6.2 Add Box
 - Box number not shown on the form; assigned automatically on save (see section 4.3).
@@ -281,7 +281,7 @@ VITE_LLM_API_KEY=
 ## 13. Offline / PWA Support
 - App is a PWA: installable to phone home screen, opens full-screen.
 - `vite-plugin-pwa` generates the service worker and manifest.
-- Manifest: name "BoxBuddy", short_name "BoxBuddy", icons from `public/icons/`, theme color matches app branding.
+- Manifest: name "BoxIndex", short_name "BoxIndex", icons from `public/icons/`, theme color matches app branding.
 - Service worker precaches the app shell (JS, CSS, HTML) so the app loads with no connection.
 - Runtime caching: Firebase Storage photo URLs cached with a cache-first strategy, so previously viewed photos stay visible offline.
 - Firestore offline persistence enabled in `firebase.ts` via the modern cache API (`enableIndexedDbPersistence` is deprecated). Use `initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) })`. `persistentMultipleTabManager` avoids the single-tab failure of the old API. Reads return cached data when offline. Writes queue locally and sync automatically once reconnected.
@@ -303,7 +303,7 @@ VITE_LLM_API_KEY=
 7. Build `firebase.ts`: initialize app, export auth, db, storage instances, enable Firestore offline persistence via `initializeFirestore` + `persistentLocalCache`/`persistentMultipleTabManager` (section 13).
 8. Install and configure `vite-plugin-pwa`: manifest (name, icons, theme color) and service worker with photo runtime caching.
 9. Build `Login.tsx`: "Sign in with Google" button (official logo), hybrid `signInWithPopup` (desktop) / `signInWithRedirect` (Android) + `prompt: 'select_account'`; redirect result + member-claim check handled in App.tsx (sections 5, 6.1).
-10. Build `Nav.tsx`: responsive nav, bottom bar on mobile, top bar on desktop. App header shows the BoxBuddy title, the user's Google profile photo in a circle, and a sign-out button (section 5).
+10. Build `Nav.tsx`: responsive nav, bottom bar on mobile, top bar on desktop. App header shows the BoxIndex title, the user's Google profile photo in a circle, and a sign-out button (section 5).
 11. Build offline indicator component, shown when `navigator.onLine` is false.
 12. Seed `rooms` collection with starting rooms, colors, and ranges (section 4.2), or build empty and let Config screen populate it.
 13. Build `Config.tsx`: room manager (add/edit/delete, palette swatch selection for room color + discrete `SwatchGridPicker` (preset grid + hex field, no SV picker) for adding/editing palette colors, range start with auto-suggest and overlap warning), orphaned-photos cleanup (section 6.2/6.5).

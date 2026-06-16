@@ -21,8 +21,8 @@ export const CONFIRM_LABELS: Record<ConfirmKey, string> = {
 }
 
 const KEYS = Object.keys(CONFIRM_LABELS) as ConfirmKey[]
-const STORAGE_KEY = 'boxbuddy.confirmPrefs'
-export const CONFIRM_PREFS_EVENT = 'boxbuddy-confirm-prefs'
+const STORAGE_KEY = 'boxindex.confirmPrefs'
+export const CONFIRM_PREFS_EVENT = 'boxindex-confirm-prefs'
 
 export type ConfirmPrefs = Record<ConfirmKey, boolean>
 

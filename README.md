@@ -1,6 +1,6 @@
-# BoxBuddy
+# BoxIndex
 
-> GitHub repo: `box-tracker` · App display name: **BoxBuddy**
+> GitHub repo: `box-tracker` · App display name: **BoxIndex**
 
 A small PWA for tracking packed moving boxes during a household shipment. Each box gets an auto-assigned number, a room, photos, and a short AI-summarized description. Family members add boxes while packing and search by box number while unpacking.
 

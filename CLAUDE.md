@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Status
 
-Built and deployed (live at `box-tracker-81539.web.app`). All main screens implemented (`Login`, `AddBox`, `Browse`, `Config`, `Nav`); CI/CD, rules, and Groq LLM wiring in place. Remaining work is on-device testing (PLAN Phase 11). GitHub repo name is `box-tracker` (public); app display name is `BoxBuddy`.
+Built and deployed (live at `box-tracker-81539.web.app`). All main screens implemented (`Login`, `AddBox`, `Browse`, `Config`, `Nav`); CI/CD, rules, and Groq LLM wiring in place. Remaining work is on-device testing (PLAN Phase 11). GitHub repo name is `box-tracker` (public); app display name is `BoxIndex`.
 
 ## Stack
 

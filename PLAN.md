@@ -1,4 +1,4 @@
-# BoxBuddy — Build Plan
+# BoxIndex — Build Plan
 
 Tracking checklist for building the app. Source of truth: `SPEC.md`. Check items off as completed.
 
@@ -21,7 +21,7 @@ Tracking checklist for building the app. Source of truth: `SPEC.md`. Check items
 - [x] `firebase.ts`: init app; export auth, db, storage
   - [x] Offline persistence via `initializeFirestore` + `persistentLocalCache` + `persistentMultipleTabManager` (NOT `enableIndexedDbPersistence`)
 - [x] `llm.ts`: `summarize(transcript)` — passthrough mode (returns raw transcript)
-- [x] `vite-plugin-pwa` config: manifest (name/short_name "BoxBuddy", icons, theme color) + SW with photo runtime caching (cache-first)
+- [x] `vite-plugin-pwa` config: manifest (name/short_name "BoxIndex", icons, theme color) + SW with photo runtime caching (cache-first)
 - [x] Add PWA icons to `public/icons/` (192, 512) — placeholder solid-color PNGs, replace with branded art
 
 ## Phase 3 — Security rules

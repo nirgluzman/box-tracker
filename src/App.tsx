@@ -84,7 +84,7 @@ export default function App() {
       }
       getIdTokenResult(u).then(({ claims }) => {
         if (claims.member !== true) {
-          setAuthError("This account isn't authorized to use BoxBuddy.")
+          setAuthError("This account isn't authorized to use BoxIndex.")
           void signOut(auth) // re-fires onAuthStateChanged(null)
           return
         }
@@ -161,7 +161,7 @@ export default function App() {
     <div className="flex h-dvh flex-col">
       <OfflineBanner />
       <header className="flex shrink-0 items-center justify-between gap-3 border-b border-edge bg-surface px-4 py-2.5">
-        <span className="text-lg font-bold text-accent">BoxBuddy</span>
+        <span className="text-lg font-bold text-accent">BoxIndex</span>
         <div className="flex items-center gap-3">
           <Avatar user={user} />
           <button type="button" className="btn" onClick={() => signOut(auth)}>
