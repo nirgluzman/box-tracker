@@ -103,18 +103,27 @@ export default function App() {
   // In an installed PWA there is no URL bar, so once back reaches the very first
   // history entry the next press EXITS the app, tearing down auth + Firestore
   // sync and forcing a re-auth/re-sync on relaunch (bad UX, reported by users).
-  // To prevent the app from closing we seed a buffer of `guard` entries *below*
-  // the root screen and rebuild it on every guard pop (see the diagram and the
-  // rapid-click rationale on seedGuards() below). Back from any screen walks down
-  // to the 'add' screen as normal; one more back lands on a guard entry, whose
-  // popstate handler rebuilds the buffer and re-pins 'add' on top. Net effect:
-  // the back press at the first screen is swallowed and the app stays open.
+  // To prevent the app from closing we seed a `guard` entry *below* the first
+  // screen and re-pin the first screen whenever back reaches it.
   //
-  // Only armed when "installed" (launched without a URL bar). In a normal
-  // browser tab the guard is skipped so back behaves normally. We test several
-  // display modes because matchMedia('standalone') alone misses minimal-ui /
-  // fullscreen installs and iOS home-screen (navigator.standalone) - missing any
-  // of those would leave the guard unseeded and the app would close on back.
+  //   index 0: { guard: true }   <- sentinel, never displayed
+  //   index 1: { screen: 'add' } <- first visible screen
+  //
+  // CRITICAL - user-activation gating: Chrome's "history manipulation
+  // intervention" SKIPS history entries that were pushed without a user gesture
+  // when the user presses back (anti back-trap heuristic). The guard must
+  // therefore be seeded only after the document has had a user gesture, otherwise
+  // back jumps straight past it and exits anyway. On Android the sign-in uses
+  // signInWithRedirect, which reloads into a FRESH document with no activation, so
+  // a guard seeded on load is always skippable - which is why earlier attempts
+  // failed on the phone. Once any tap happens, sticky activation persists for the
+  // document's lifetime and every later pushState (incl. the popstate re-pin) is
+  // exempt. So: seed now if the document is already active, else on first gesture.
+  //
+  // Only armed when "installed" (launched without a URL bar). In a normal browser
+  // tab the guard is skipped so back behaves normally. We test several display
+  // modes because matchMedia('standalone') alone misses minimal-ui / fullscreen
+  // installs and iOS home-screen (navigator.standalone).
   useEffect(() => {
     if (!user) return
     const installed =
@@ -122,43 +131,51 @@ export default function App() {
       window.matchMedia('(display-mode: minimal-ui)').matches ||
       window.matchMedia('(display-mode: fullscreen)').matches ||
       (navigator as { standalone?: boolean }).standalone === true
-    // A single guard sentinel can be OUTRUN by rapid back-presses: the browser
-    // pops several history entries before our async popstate handler re-pins the
-    // app, so mashing back from the first screen drops below the stack and exits.
-    // Instead we keep a BUFFER of guard entries below the first screen and rebuild
-    // the full buffer on every guard pop, so it self-heals faster than a human can
-    // click. Stack while installed:
-    //
-    //   index 0..N-1: { guard: true }   <- buffer, never displayed
-    //   index N:      { screen: 'add' } <- first visible screen
-    const GUARD_DEPTH = 3
-    const seedGuards = () => {
-      // replaceState the current entry, then stack the rest. Called on mount and on
-      // every guard pop, so wherever a rapid back-burst left us, we rebuild the full
-      // buffer + first screen on top (pushState truncates any forward entries).
+    if (!installed) {
+      window.history.replaceState({ screen: 'add' }, '')
+      const onPopTab = (e: PopStateEvent) => setScreen((e.state?.screen as Screen) ?? 'add')
+      window.addEventListener('popstate', onPopTab)
+      return () => window.removeEventListener('popstate', onPopTab)
+    }
+
+    const seedGuard = () => {
       window.history.replaceState({ screen: 'add', guard: true }, '')
-      for (let i = 1; i < GUARD_DEPTH; i++) window.history.pushState({ screen: 'add', guard: true }, '')
       window.history.pushState({ screen: 'add' }, '')
     }
-    if (installed) {
-      seedGuards()
-    } else {
-      window.history.replaceState({ screen: 'add' }, '')
+    // Seed immediately if the document already carries (sticky) user activation;
+    // otherwise wait for the first gesture so the pushed entry isn't skipped.
+    const ua = (navigator as { userActivation?: { hasBeenActive: boolean } }).userActivation
+    let seeded = false
+    const armSeed = () => {
+      if (seeded) return
+      seeded = true
+      seedGuard()
+      window.removeEventListener('pointerdown', armSeed)
+      window.removeEventListener('keydown', armSeed)
     }
+    if (ua?.hasBeenActive) {
+      armSeed()
+    } else {
+      window.addEventListener('pointerdown', armSeed)
+      window.addEventListener('keydown', armSeed)
+    }
+
     const onPop = (e: PopStateEvent) => {
       if (e.state?.guard) {
-        // Back reached the guard buffer (i.e. went below the first screen): rebuild
-        // the buffer and pin the first screen so the press is swallowed and the
-        // installed PWA stays open instead of exiting.
-        seedGuards()
+        // Back reached the guard sentinel (went below the first screen): re-pin the
+        // first screen so the press is swallowed and the installed PWA stays open.
+        window.history.pushState({ screen: 'add' }, '')
         setScreen('add')
         return
       }
-      const s = (e.state?.screen as Screen) ?? 'add'
-      setScreen(s)
+      setScreen((e.state?.screen as Screen) ?? 'add')
     }
     window.addEventListener('popstate', onPop)
-    return () => window.removeEventListener('popstate', onPop)
+    return () => {
+      window.removeEventListener('popstate', onPop)
+      window.removeEventListener('pointerdown', armSeed)
+      window.removeEventListener('keydown', armSeed)
+    }
   }, [user])
 
   const navigate = (s: Screen) => {
