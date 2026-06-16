@@ -1,6 +1,6 @@
-# BoxIndex
+# BoxIndex — Moving-Box Tracker PWA
 
-> GitHub repo: `box-tracker` · App display name: **BoxIndex**
+> **A quick note on naming:** this repo lives at `box-tracker`, but the app itself ships as **BoxIndex** (browser tab, login screen, PWA manifest). Same project, just a friendlier product name.
 
 A small PWA for tracking packed moving boxes during a household shipment. Each box gets an auto-assigned number, a room, photos, and a short AI-summarized description. Family members add boxes while packing and search by box number while unpacking.
 
