@@ -28,13 +28,13 @@ export function registerMember(user: User, isAdmin: boolean): Promise<void> {
   return setDoc(doc(db, 'members', user.uid), data, { merge: true })
 }
 
-// Admin action: set/clear a delete permission for a member. Storing true is the
-// same as the absent default; we store it explicitly so the toggle reflects the
-// last choice instead of reverting to an implicit default.
+// Admin action: set/clear a delete permission for a member. The admin must opt a
+// user in explicitly (default is blocked, below).
 export function setDeletePerm(uid: string, field: DeletePerm, allowed: boolean): Promise<void> {
   return setDoc(doc(db, 'members', uid), { [field]: allowed }, { merge: true })
 }
 
-// Absent flag = allowed; only an explicit false blocks. The admin override is
-// applied by the caller (usePermissions / the admin panel), not here.
-export const permAllowed = (value?: boolean): boolean => value !== false
+// Default-deny: a member may delete only when the admin has set the flag to true.
+// Absent or false = blocked. The admin override is applied by the caller
+// (usePermissions / the admin panel), not here.
+export const permAllowed = (value?: boolean): boolean => value === true

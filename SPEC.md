@@ -109,8 +109,8 @@ One doc per signed-in user, id = auth uid. Drives the admin's delete-permission 
 | displayName | string \| null | Google display name. Self-written on sign-in. |
 | photoURL | string \| null | Google profile photo URL. Self-written on sign-in. |
 | admin | boolean (optional) | Display-only mirror of the `admin` claim; written only by the admin's own client (rules forbid anyone else). Real authority is the token claim. |
-| canDeleteBox | boolean (optional) | Admin-set. Absent = allowed; explicit `false` blocks. Enforced in rules + UI. |
-| canDeletePhoto | boolean (optional) | Admin-set. Absent = allowed; explicit `false` blocks. UI-only (Storage rules can't read Firestore). |
+| canDeleteBox | boolean (optional) | Admin-set. Default-deny: only explicit `true` allows; absent/`false` blocks. Enforced in rules + UI. |
+| canDeletePhoto | boolean (optional) | Admin-set. Default-deny: only explicit `true` allows; absent/`false` blocks. UI-only (Storage rules can't read Firestore). |
 
 ## 5. Authentication
 - **Google sign-in only.** No email/password, no in-app passwords. One "Sign in with Google" button (official Google logo + wordmark, per Google's branding guidelines).
@@ -127,9 +127,9 @@ One doc per signed-in user, id = auth uid. Drives the admin's delete-permission 
 - No password reset needed - Google handles account recovery.
 
 ### 5.1 Delete permissions (admin)
-Guards against a family member (e.g. a child) **accidentally** deleting boxes or photos. Editing a box description is always allowed; only deletion is gated.
+Guards against a family member (e.g. a child) deleting boxes or photos. Editing a box description is always allowed; only deletion is gated. **Default-deny:** no one can delete until the admin grants it (the admin itself is always allowed).
 - **Admin identity = `admin` custom claim**, granted alongside `member` via `node scripts/setMember.js <email> --admin` (drop it again with `--admin --revoke`). The admin's email appears **nowhere** - not in committed source, not in the public client bundle, not in `firestore.rules`. Rules and client both read `request.auth.token.admin`. This is decoupled from deploys: granting/revoking admin is just re-running the script (no rebuild/redeploy); only the one-time rules change ships through CI.
-- **Per-user permissions** live on a `members/{uid}` doc (section 4.4): `canDeleteBox` and `canDeletePhoto`. **Absent = allowed** (preserves the original everyone-can-delete behavior); only an explicit `false` blocks that user. The admin is never blocked.
+- **Per-user permissions** live on a `members/{uid}` doc (section 4.4): `canDeleteBox` and `canDeletePhoto`. **Default-deny**: only an explicit `true` allows; absent or `false` blocks that user. The admin is never blocked.
 - **Config screen (section 6.5):** the admin sees every member (profile photo + name) with two toggles (delete boxes / delete photos); their own row shows "Admin - full access". Non-admins see their own two permissions **read-only**, plus who the admin is.
 - **Enforcement is asymmetric:**
   - *Box deletion* is enforced in **`firestore.rules`** (the rule reads the member doc) **and** in the UI - real security.
@@ -265,8 +265,8 @@ function isMember()  { return request.auth.token.member == true; }
 function isAdmin()   { return request.auth.token.admin  == true; }
 function canDeleteBox() {
   let path = /databases/$(database)/documents/members/$(request.auth.uid);
-  // Absent flag = allowed; only an explicit false blocks. Admin is never blocked.
-  return isAdmin() || !exists(path) || get(path).data.get('canDeleteBox', true) == true;
+  // Default-deny: blocked unless the admin set canDeleteBox == true. Admin never blocked.
+  return isAdmin() || (exists(path) && get(path).data.get('canDeleteBox', false) == true);
 }
 
 match /boxes/{box} {

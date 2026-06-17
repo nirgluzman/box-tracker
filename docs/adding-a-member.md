@@ -92,9 +92,9 @@ next token refresh (sign out / back in). The one-time `firestore.rules` change t
 gate is enforced server-side; granting/removing admin afterward needs **no redeploy**.
 
 What admin unlocks: on the Config screen the admin sees every member with "delete boxes" /
-"delete photos" toggles; everyone else sees their own permissions read-only. Default is
-"allowed" - flip a toggle off to block a specific user (e.g. a child). Box-delete blocking
-is enforced in rules; photo-delete blocking is UI-only (SPEC 5.1 / 15).
+"delete photos" toggles; everyone else sees their own permissions read-only. **Default-deny:**
+no one can delete until the admin turns a toggle on (the admin is always allowed). Box-delete
+blocking is enforced in rules; photo-delete blocking is UI-only (SPEC 5.1 / 15).
 
 ---
 

@@ -468,7 +468,8 @@ function DeletePermissions() {
       <p className="mb-3 text-sm text-muted">
         {adminLabel}
         {adminEmails.length ? `: ${adminEmails.join(', ')}` : ''}. The admin decides who may delete
-        boxes and photos. Everyone may delete by default; editing a description is always allowed.
+        boxes and photos. No one can delete until the admin allows them; editing a description is
+        always allowed.
       </p>
 
       {isAdmin ? (

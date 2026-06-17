@@ -15,13 +15,13 @@ service cloud.firestore {
       return request.auth.token.admin == true;
     }
 
-    // Box deletion can be revoked per member by the admin (SPEC 5). Absent flag
-    // = allowed; only an explicit false blocks. Admin is never blocked. Photo
-    // deletion is NOT enforced here - it lives in Storage, whose rules can't
-    // read Firestore (SPEC 5/15), so it is UI-only.
+    // Box deletion is granted per member by the admin (SPEC 5). Default-deny:
+    // blocked unless the admin set canDeleteBox == true. Admin is never blocked.
+    // Photo deletion is NOT enforced here - it lives in Storage, whose rules
+    // can't read Firestore (SPEC 5/15), so it is UI-only.
     function canDeleteBox() {
       let path = /databases/$(database)/documents/members/$(request.auth.uid);
-      return isAdmin() || !exists(path) || get(path).data.get('canDeleteBox', true) == true;
+      return isAdmin() || (exists(path) && get(path).data.get('canDeleteBox', false) == true);
     }
 
     match /boxes/{box} {
