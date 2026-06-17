@@ -32,10 +32,15 @@ export function Lightbox({
   photos,
   index,
   onClose,
+  trapBack = true,
 }: {
   photos: string[]
   index: number
   onClose: () => void
+  // When nested inside another back-dismissable overlay (e.g. the box detail
+  // sheet), set false so this viewer doesn't push its own history entry - the
+  // parent owns the single back level. Default true for standalone use.
+  trapBack?: boolean
 }) {
   const [i, setI] = useState(index)
   const imgRef = useRef<HTMLImageElement>(null)
@@ -48,8 +53,9 @@ export function Lightbox({
   // accumulated dx for live drag feedback.
   const swipe = useRef<{ startX: number; startY: number; dx: number; active: boolean } | null>(null)
 
-  // Android back button closes the viewer instead of changing screens.
-  useBackDismiss(true, onClose)
+  // Android back button closes the viewer instead of changing screens (unless a
+  // parent overlay already owns the back level - see trapBack).
+  useBackDismiss(trapBack, onClose)
 
   const pinchDist = () => {
     const [a, b] = [...pointers.current.values()]

@@ -1,15 +1,16 @@
-import { type ChangeEvent, Fragment, useMemo, useState } from 'react'
+import { type ChangeEvent, Fragment, useEffect, useMemo, useState } from 'react'
 import { useBoxes } from '../hooks/useBoxes'
 import { useRooms } from '../hooks/useRooms'
 import { useOnline } from '../hooks/useOnline'
 import { useIsTouch } from '../hooks/useIsTouch'
 import { usePermissions } from '../hooks/usePermissions'
+import { useBackDismiss } from '../hooks/useBackDismiss'
 import { addBoxPhoto, boxKey, deleteBox, duplicateKeys, removeBoxPhoto, updateBox } from '../data/boxes'
 import { downloadBoxesCsv } from '../data/csv'
 import { confirmAction } from '../data/confirmPrefs'
 import { Spinner } from './Spinner'
 import { Lightbox, PhotoBadge } from './PhotoThumbs'
-import { PencilIcon, TrashIcon } from './icons'
+import { ImageIcon, PencilIcon, TrashIcon } from './icons'
 import type { BoxDoc, RoomDoc } from '../types'
 
 // Normalize text for the contents search: lowercase, strip punctuation (keeps
@@ -52,6 +53,7 @@ export default function Browse() {
   const [textQuery, setTextQuery] = useState('') // contents (fuzzy)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [detailId, setDetailId] = useState<string | null>(null) // mobile detail popup
 
   const dupKeys = useMemo(() => duplicateKeys(boxes), [boxes])
 
@@ -105,6 +107,13 @@ export default function Browse() {
       setDeletingId(null)
     }
   }
+
+  // Box backing the mobile detail popup, looked up live so realtime edits show.
+  const detailBox = detailId ? boxes.find((b) => b.id === detailId) ?? null : null
+  // Close the popup if its box vanishes (deleted here or by another member).
+  useEffect(() => {
+    if (detailId && !detailBox) setDetailId(null)
+  }, [detailId, detailBox])
 
   if (loading)
     return (
@@ -243,10 +252,7 @@ export default function Browse() {
                       key={box.id}
                       box={box}
                       duplicate={dupKeys.has(boxKey(box))}
-                      deleting={deletingId === box.id}
-                      canDelete={canDeleteBox}
-                      onEdit={() => setEditingId(box.id)}
-                      onDelete={() => handleDelete(box)}
+                      onOpen={() => setDetailId(box.id)}
                     />
                   ),
                 )}
@@ -344,6 +350,23 @@ export default function Browse() {
           </table>
         </>
       )}
+
+      {/* Mobile detail popup (SPEC 6.3): the card shows a 2-line glance; tapping
+          opens this for the full description, photos, and edit/delete. */}
+      {detailBox && (
+        <BoxDetail
+          box={detailBox}
+          duplicate={dupKeys.has(boxKey(detailBox))}
+          deleting={deletingId === detailBox.id}
+          canDelete={canDeleteBox}
+          onEdit={() => {
+            setDetailId(null)
+            setEditingId(detailBox.id)
+          }}
+          onDelete={() => handleDelete(detailBox)}
+          onClose={() => setDetailId(null)}
+        />
+      )}
     </section>
   )
 }
@@ -362,24 +385,20 @@ function DuplicateBadge() {
 function BoxCard({
   box,
   duplicate,
-  deleting,
-  canDelete,
-  onEdit,
-  onDelete,
+  onOpen,
 }: {
   box: BoxDoc
   duplicate: boolean
-  deleting: boolean
-  canDelete: boolean
-  onEdit: () => void
-  onDelete: () => void
+  onOpen: () => void
 }) {
-  // Compact scan row (SPEC 6.3): the number + a clamped description carry the
-  // glance; photos collapse to an icon+count that opens the swipeable viewer;
-  // the full detail/edit view lives behind the pencil. Tuned for 200+ boxes.
+  // Compact scan row (SPEC 6.3), tuned for 200+ boxes: the number + a 2-line
+  // description carry the glance. Tapping opens the detail popup (BoxDetail) for
+  // the full description, photos, and edit/delete - so the row stays tight.
   return (
-    <div
-      className="flex items-start gap-2 rounded-lg border border-edge bg-surface py-2 pl-2 pr-1.5"
+    <button
+      type="button"
+      onClick={onOpen}
+      className="flex w-full items-start gap-2 rounded-lg border border-edge bg-surface py-2 pl-2 pr-3 text-left hover:bg-surface-2"
       style={{ borderLeft: `4px solid ${box.roomColor}` }}
     >
       <span className="mt-px shrink-0 text-base font-bold tabular-nums">#{box.boxNumber}</span>
@@ -394,31 +413,139 @@ function BoxCard({
             <span className="rounded bg-danger/20 px-1.5 font-medium text-danger">Urgent</span>
           )}
           {duplicate && <DuplicateBadge />}
+          {box.photoUrls.length > 0 && (
+            <span className="inline-flex items-center gap-0.5">
+              <ImageIcon className="size-3.5" />
+              {box.photoUrls.length}
+            </span>
+          )}
         </div>
       </div>
-      <div className="flex shrink-0 items-center gap-0.5">
-        <PhotoBadge urls={box.photoUrls} />
-        <button
-          type="button"
-          className="rounded p-2 hover:bg-surface-2"
-          onClick={onEdit}
-          aria-label="Edit"
-          title="Edit"
-        >
-          <PencilIcon />
-        </button>
-        <button
-          type="button"
-          className="rounded p-2 text-muted hover:bg-surface-2 disabled:opacity-40"
-          onClick={onDelete}
-          disabled={deleting || !canDelete}
-          aria-label="Delete"
-          title={canDelete ? 'Delete' : 'Deleting is disabled by the admin'}
-        >
-          {deleting ? <Spinner /> : <TrashIcon />}
-        </button>
+    </button>
+  )
+}
+
+// Mobile detail popup: full description + photos + edit/delete. Closes on the
+// backdrop, the ×, Escape, or Android back (useBackDismiss). The photo viewer is
+// nested with trapBack={false} so back/Escape close it first, then the popup.
+function BoxDetail({
+  box,
+  duplicate,
+  deleting,
+  canDelete,
+  onEdit,
+  onDelete,
+  onClose,
+}: {
+  box: BoxDoc
+  duplicate: boolean
+  deleting: boolean
+  canDelete: boolean
+  onEdit: () => void
+  onDelete: () => void
+  onClose: () => void
+}) {
+  const [viewer, setViewer] = useState<number | null>(null)
+  useBackDismiss(true, onClose)
+
+  // Escape closes the popup, but only when the photo viewer isn't the top layer
+  // (the viewer handles its own Escape - see Lightbox).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && viewer === null) onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [viewer, onClose])
+
+  return (
+    <>
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 sm:items-center sm:p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="box-detail-title"
+      onClick={onClose}
+    >
+      <div
+        className="max-h-[90dvh] w-full overflow-y-auto rounded-t-2xl border border-edge bg-bg p-4 shadow-2xl sm:max-w-md sm:rounded-2xl"
+        style={{ borderTop: `4px solid ${box.roomColor}` }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-2 flex items-start gap-2">
+          <span id="box-detail-title" className="text-xl font-bold tabular-nums">
+            #{box.boxNumber}
+          </span>
+          <span className="mt-1 inline-flex items-center gap-1.5 text-sm text-muted">
+            <span className="size-3 rounded-full" style={{ background: box.roomColor }} aria-hidden="true" />
+            {box.room}
+          </span>
+          <button
+            type="button"
+            onClick={onClose}
+            className="ml-auto flex size-9 shrink-0 items-center justify-center rounded-full text-xl text-muted hover:bg-surface-2"
+            aria-label="Close"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="mb-3 flex flex-wrap items-center gap-2 text-xs">
+          {box.packingNumber && (
+            <span className="rounded bg-surface-2 px-1.5 py-0.5 text-muted">Pkg #{box.packingNumber}</span>
+          )}
+          {box.urgent && (
+            <span className="rounded bg-danger/20 px-1.5 py-0.5 font-medium text-danger">Urgent</span>
+          )}
+          {duplicate && <DuplicateBadge />}
+        </div>
+
+        <p className="whitespace-pre-wrap text-sm">
+          {box.description || <span className="text-muted">(no description)</span>}
+        </p>
+
+        {box.photoUrls.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {box.photoUrls.map((url, idx) => (
+              <button
+                key={url}
+                type="button"
+                onClick={() => setViewer(idx)}
+                className="rounded focus-visible:outline-2 focus-visible:outline-accent"
+                aria-label="View photo full screen"
+              >
+                <img src={url} alt="" className="size-20 rounded border border-edge object-cover" />
+              </button>
+            ))}
+          </div>
+        )}
+
+        <p className="mt-3 text-xs text-muted">Added by {box.addedBy}</p>
+
+        <div className="mt-4 flex gap-2">
+          <button type="button" className="btn flex-1 inline-flex items-center justify-center gap-2" onClick={onEdit}>
+            <PencilIcon /> Edit
+          </button>
+          <button
+            type="button"
+            className="btn inline-flex items-center justify-center gap-2 px-4"
+            onClick={onDelete}
+            disabled={deleting || !canDelete}
+            aria-label="Delete"
+            title={canDelete ? 'Delete' : 'Deleting is disabled by the admin'}
+          >
+            {deleting ? <Spinner /> : <TrashIcon />}
+          </button>
+        </div>
       </div>
     </div>
+
+    {/* Sibling, not a child, so the viewer's clicks don't bubble to the
+        backdrop's onClose and close the popup underneath it. */}
+    {viewer !== null && (
+      <Lightbox photos={box.photoUrls} index={viewer} onClose={() => setViewer(null)} trapBack={false} />
+    )}
+    </>
   )
 }
 
