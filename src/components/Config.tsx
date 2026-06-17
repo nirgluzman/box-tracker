@@ -152,7 +152,12 @@ export default function Config() {
                 excludeId={room.id}
                 submitLabel="Save"
                 onSubmit={async (values) => {
-                  await updateRoom(room.id, values)
+                  // Cascade a sticker-color change to all boxes in this room.
+                  await updateRoom(room.id, values, {
+                    oldName: room.name,
+                    oldColor: room.color,
+                    boxes,
+                  })
                   setEditingId(null)
                 }}
                 onCancel={() => setEditingId(null)}

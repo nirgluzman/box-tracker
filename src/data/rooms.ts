@@ -1,5 +1,6 @@
 import { addDoc, collection, deleteDoc, doc, updateDoc, writeBatch } from 'firebase/firestore'
 import { db } from '../firebase'
+import { normalizeColor } from './palette'
 import type { Room, RoomDoc } from '../types'
 
 // Default range size per room: rangeStart .. rangeStart + 99 (SPEC 4.2 / 4.3).
@@ -13,8 +14,32 @@ export function addRoom(room: Room) {
   return addDoc(roomsCol, room)
 }
 
-export function updateRoom(id: string, patch: Partial<Room>) {
-  return updateDoc(doc(db, 'rooms', id), patch)
+// Edit a room. When the sticker color changes, cascade the new color to every
+// box already saved in that room (matched by the room's previous name, since
+// boxes store their room as a name string) so the stored roomColor snapshots
+// stay in sync - same idea as editPaletteColor (SPEC 4.1/6.5). Without this,
+// existing boxes would keep the old color until each was individually re-saved.
+export async function updateRoom(
+  id: string,
+  patch: Partial<Room>,
+  cascade?: { oldName: string; oldColor: string; boxes: { id: string; room: string }[] },
+): Promise<void> {
+  const colorChanged =
+    cascade != null &&
+    patch.color != null &&
+    normalizeColor(patch.color) !== normalizeColor(cascade.oldColor)
+
+  if (!colorChanged) {
+    await updateDoc(doc(db, 'rooms', id), patch)
+    return
+  }
+
+  const batch = writeBatch(db)
+  batch.update(doc(db, 'rooms', id), patch)
+  for (const b of cascade.boxes) {
+    if (b.room === cascade.oldName) batch.update(doc(db, 'boxes', b.id), { roomColor: patch.color })
+  }
+  await batch.commit()
 }
 
 // Deleting a room leaves its boxes untouched - they keep their stored room

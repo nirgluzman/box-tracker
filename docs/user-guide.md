@@ -82,6 +82,7 @@ The **Browse** screen lists every box in real time, ordered by box number. This 
 The **Config** screen is for setup and housekeeping:
 
 - **Rooms:** add, edit, or delete rooms. Each room has a **name**, a **color**, and a **number range** (e.g. Kitchen = 100-199). New rooms auto-suggest the next free range start; you'll be warned if a range overlaps an existing one.
+  - **Changing a room's color recolors all of its existing boxes too.** When you edit a room and pick a new sticker color, every box already saved in that room is updated to the new color automatically - so Browse stays consistent without re-saving each box. (Renaming a room or changing its range does *not* change existing boxes; only the color cascades.)
   - Deleting a room leaves its boxes untouched (they keep their name, color, and numbers).
 - **Color palette:** rooms pick their color from a shared palette. You can add/remove palette colors with a honeycomb color-wheel picker. Editing a palette color recolors every room and box using it.
 - **Confirmation prompts:** toggle the "Are you sure?" prompt for each destructive action (delete box, delete photo, delete room, etc.). These settings are per-device.
