@@ -20,7 +20,7 @@ private key. The key file (`serviceAccountKey.json`) is **gitignored and never c
 
 1. Open the [Firebase Console](https://console.firebase.google.com/) and select the
    **box-tracker** project. Make sure you are signed in as the project owner
-   (`the project owner account`), not another Google account.
+   account, not another Google account.
 2. Click the gear icon → **Project settings**.
 3. Go to the **Service accounts** tab.
 4. Click **Generate new private key**, then confirm with **Generate key**. A JSON file
@@ -124,4 +124,4 @@ blocking is enforced in rules; photo-delete blocking is UI-only (SPEC 5.1 / 15).
 | `No credentials...` | `serviceAccountKey.json` is missing at the repo root and `GOOGLE_APPLICATION_CREDENTIALS` is unset. See "get a service-account key". |
 | `No Auth user for <email>` | The member hasn't signed in once yet (step 1), or signed in with a different account. |
 | Claim granted but app still rejects them | They haven't refreshed their token — sign out and back in. |
-| Wrong project in the console | Confirm you selected **box-tracker** and are signed in as `the project owner account`. |
+| Wrong project in the console | Confirm you selected **box-tracker** and are signed in as the project owner account. |
