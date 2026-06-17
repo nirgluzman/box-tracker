@@ -114,7 +114,11 @@ export function Lightbox({
       const totalY = e.clientY - s.startY
       if (!s.active && Math.abs(s.dx) > 10 && Math.abs(s.dx) > Math.abs(totalY)) s.active = true
       if (s.active) {
-        view.current.tx = s.dx
+        // Rubber-band: dragging past the first photo (right) or last photo
+        // (left) meets resistance and won't navigate, signalling the end.
+        const atStart = i === 0 && s.dx > 0
+        const atEnd = i === photos.length - 1 && s.dx < 0
+        view.current.tx = atStart || atEnd ? s.dx / 3 : s.dx
         apply()
       }
     }
@@ -129,8 +133,11 @@ export function Lightbox({
     // go() resets the transform. Otherwise snap the dragged image back.
     if (s?.active && view.current.scale <= 1) {
       const threshold = Math.min(80, window.innerWidth / 4)
-      if (Math.abs(s.dx) > threshold) {
-        go(s.dx < 0 ? 1 : -1)
+      const dir = s.dx < 0 ? 1 : -1
+      const target = i + dir
+      // Navigate only within bounds; at an edge the image just snaps back.
+      if (Math.abs(s.dx) > threshold && target >= 0 && target < photos.length) {
+        go(dir)
         return
       }
     }
@@ -151,7 +158,7 @@ export function Lightbox({
   }
 
   function go(delta: number) {
-    setI((prev) => (prev + delta + photos.length) % photos.length)
+    setI((prev) => clamp(prev + delta, 0, photos.length - 1))
     reset()
   }
 
@@ -175,7 +182,8 @@ export function Lightbox({
         <>
           <button
             type="button"
-            className="absolute left-2 top-1/2 z-10 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 text-2xl text-white"
+            disabled={i === 0}
+            className="absolute left-2 top-1/2 z-10 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 text-2xl text-white disabled:opacity-30"
             onClick={(e) => {
               e.stopPropagation()
               go(-1)
@@ -186,7 +194,8 @@ export function Lightbox({
           </button>
           <button
             type="button"
-            className="absolute right-2 top-1/2 z-10 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 text-2xl text-white"
+            disabled={i === photos.length - 1}
+            className="absolute right-2 top-1/2 z-10 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 text-2xl text-white disabled:opacity-30"
             onClick={(e) => {
               e.stopPropagation()
               go(1)
