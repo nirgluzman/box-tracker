@@ -75,6 +75,20 @@ The **admin** controls who can delete boxes/photos (SPEC 5.1). Admin is a second
 claim (`admin`), granted/removed the same way as `member`. No email is hardcoded anywhere -
 the app reads `request.auth.token.admin`. **More than one admin is allowed.**
 
+### `setMember.js` command reference
+
+Two custom claims control access: **`member`** is the baseline (without it the rules reject
+everything and the app signs the person out as unauthorized); **`admin`** is an extra claim on
+top that adds the delete-permission powers. Every command takes effect only after the target's
+**next token refresh** (sign out / back in, or `getIdToken(true)`).
+
+| Command | `member` | `admin` | What it does |
+|---|:--:|:--:|---|
+| `node scripts/setMember.js <email>` | ✅ set | unchanged | Grant normal app access (the usual "add a member"). |
+| `node scripts/setMember.js <email> --admin` | ✅ set | ✅ set | Make an admin; also ensures they are a member. Multiple admins are fine. |
+| `node scripts/setMember.js <email> --admin --revoke` | unchanged | ❌ cleared | Demote: drop admin only, **keep** normal member access. |
+| `node scripts/setMember.js <email> --revoke` | ❌ cleared | ❌ cleared | Remove **all** access (clears every claim). Person is locked out of the app entirely. |
+
 ```bash
 # Make someone an admin (also ensures they are a member):
 node scripts/setMember.js <email> --admin
@@ -82,9 +96,14 @@ node scripts/setMember.js <email> --admin
 # Remove admin only, keep their normal member access:
 node scripts/setMember.js <email> --admin --revoke
 
-# Remove all access (member + admin):
+# Remove all access (member + admin) - locks them out of the app:
 node scripts/setMember.js <email> --revoke
 ```
+
+> Don't remove the **last** admin unless intended: with no admin, the Config permission panel
+> can't be changed by anyone, and you'd have to re-grant `--admin` via this script to recover.
+> To also delete the account record, remove the user under **Authentication → Users** in the
+> Firebase Console.
 
 As with `member`, the target must have signed in once, and the change takes effect on their
 next token refresh (sign out / back in). The one-time `firestore.rules` change that reads
