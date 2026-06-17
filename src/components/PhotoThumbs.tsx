@@ -215,7 +215,7 @@ export function Lightbox({
         key={i}
         src={photos[i]}
         alt=""
-        className="max-h-[100dvh] max-w-[100vw] touch-none select-none object-contain"
+        className="h-auto w-screen max-h-[100dvh] touch-none select-none object-contain"
         draggable={false}
         onClick={(e) => {
           e.stopPropagation()
