@@ -21,6 +21,7 @@ The complete specification lives in [SPEC.md](./SPEC.md) — the authoritative s
 
 ## Documentation
 
+- [docs/user-guide.md](./docs/user-guide.md) — how to use the app: adding boxes, browsing/unpacking, config, CSV, offline.
 - [SPEC.md](./SPEC.md) — authoritative product/technical spec.
 - [PLAN.md](./PLAN.md) — build checklist and progress.
 - [docs/architecture.md](./docs/architecture.md) — system architecture diagram and component overview.
