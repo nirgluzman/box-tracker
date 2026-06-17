@@ -71,9 +71,13 @@ The **Browse** screen lists every box in real time, ordered by box number. This 
 
 **Views:** cards on phones, a table on desktop - same data.
 
-**Editing a box:** tap the **pencil** icon. You can change anything, add or remove photos, etc. Photo changes save immediately. This is also how you **add photos later** to a box you created offline.
+**Seeing a box's details (phone):** to keep the list easy to scan, each card shows only the box number and the first two lines of the description. **Tap the card** to open a popup with the full description, photos, and the Edit/Delete buttons. Close it by tapping outside it, the **×** in the top corner, or the back button.
 
-**Unpacking a box:** when you've opened and emptied a box, tap the **trash** icon to delete it. Deleting *is* the "unpacked" action - it removes the box and its photos. You'll be asked to confirm (unless you turned that prompt off in Config).
+**Photos:** a small image icon with a number shows how many photos a box has. Tap it (or a thumbnail in the detail popup) to open the full-screen viewer - swipe sideways to move between photos, pinch to zoom.
+
+**Editing a box:** tap the **pencil** icon (on a phone, first tap the card to open the box, then Edit). You can change anything, add or remove photos, etc. Photo changes save immediately. This is also how you **add photos later** to a box you created offline.
+
+**Unpacking a box:** when you've opened and emptied a box, tap the **trash** icon to delete it (on a phone it's inside the box's detail popup). Deleting *is* the "unpacked" action - it removes the box and its photos. You'll be asked to confirm (unless you turned that prompt off in Config).
 
 **Warnings:** if two boxes in the same room share a number, both get a warning badge - fix it via Edit.
 

@@ -171,17 +171,18 @@ Browse is the single screen for both browsing while packing and finding a box wh
 - Contents search is token-based and tolerant: each query word matches if it equals, contains, or is contained by any description word (bidirectional substring, >=2 chars). This handles plurals (`glass` ↔ `glasses`) and Hebrew attached prefixes (`צלחות` ↔ `וצלחות`) without an LLM or stemmer.
 - Filter controls: by room (multi-select pills — pick one or several rooms, or "All" to clear) and by urgent flag.
 - "Group by room" option: when enabled, the list is split into per-room sections (ordered by `rangeStart`, deleted-room names last) with a color-coded header and box count; otherwise it stays a flat boxNumber-ordered list. Works in both card and table views.
-- Mobile: card per box, color-coded by room.
-- Desktop: table view, same data.
-- Each box has Edit and Delete actions, shown as icons (pencil / trash) for clarity. Delete doubles as "unpacked" — deleting a box that has been opened and emptied is the intended unpacking action.
-- Edit opens an inline form, prefilled with current values. The form can also add photos (rear camera or gallery) and remove existing photos on the box, which persist immediately (section 13 — the "type now, add photos later" flow).
+- Mobile: a compact card per box, color-coded by room, tuned for scanning 200+ boxes. The card is a glance view — box number plus a 2-line (clamped) description, then a small meta line (room, packing #, urgent, duplicate badge, and a photo icon + count when the box has photos). Tapping the card opens a **detail popup** (full description, photo thumbnails, "Added by", and Edit/Delete actions); it closes on the backdrop, the × (top-right), Escape, or the Android back button.
+- Desktop: table view, same data, including a Photos column (photo icon + count) and inline Edit/Delete actions per row.
+- Photos open a full-screen, swipeable, pinch-to-zoom viewer (via the photo icon + count on a card/row, or a thumbnail in the mobile detail popup).
+- Each box has Edit and Delete actions, shown as icons (pencil / trash) for clarity — inline in the row on desktop, inside the detail popup on mobile. Delete doubles as "unpacked" — deleting a box that has been opened and emptied is the intended unpacking action.
+- Edit opens an inline form, prefilled with current values (on mobile it replaces the card in the list). The form can also add photos (rear camera or gallery) and remove existing photos on the box, which persist immediately (section 13 — the "type now, add photos later" flow).
 - Delete removes the Firestore document and all files in photoUrls from Storage, after a confirmation prompt. Removing an individual photo also prompts for confirmation.
 - Delete actions respect the admin's per-user delete permissions (section 5.1): a blocked user sees the box-delete button disabled (tooltip "Deleting is disabled by the admin") and the per-photo remove button hidden. Editing is unaffected.
 - Boxes with a duplicate `boxNumber` within the same room (see section 4.3) are flagged with a warning badge.
 - "Export CSV" button triggers CSV download of the **full dataset**, ignoring any active room/urgent filters (see section 8).
 
 ### 6.4 Unpack — merged into Browse
-The Unpack screen no longer exists as a separate screen; its capabilities (search by box number / packing number / contents, view photos, and delete an emptied box) are part of Browse (section 6.3). Card view shows room, description, urgent flag, and photos for each match.
+The Unpack screen no longer exists as a separate screen; its capabilities (search by box number / packing number / contents, view photos, and delete an emptied box) are part of Browse (section 6.3). On mobile the card shows the box number, room, a 2-line description glance, urgent flag, and a photo indicator; tapping it opens the detail popup with the full description and photos for each match.
 
 ### 6.5 Config
 - Room manager: list of rooms with name, color swatch, and number range.
