@@ -47,7 +47,14 @@ export default function AddBox() {
   const [photos, setPhotos] = useState<UploadedPhoto[]>([]);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [confirmation, setConfirmation] = useState<string | null>(null);
+  // Post-save confirmation modal: the user must dismiss it (OK) before adding the
+  // next box, so the assigned number is never missed (SPEC 4.3 / 6.2).
+  const [confirmation, setConfirmation] = useState<{
+    boxNumber: number;
+    room: string;
+    color: string;
+    overflow: string | null;
+  } | null>(null);
   const [summarizing, setSummarizing] = useState(false);
   const [removingPath, setRemovingPath] = useState<string | null>(null);
   const [viewer, setViewer] = useState<number | null>(null);
@@ -149,13 +156,12 @@ export default function AddBox() {
       });
       savedRef.current = true; // photos now belong to a saved box
 
-      let message = `Saved as Box #${boxNumber} (${room.name}) - write this on the box.`;
-      if (isRangeOverflow(boxNumber, room.rangeStart)) {
-        message += ` Box #${boxNumber} exceeds the ${room.name} range (${room.rangeStart}-${rangeEnd(
-          room.rangeStart
-        )}) - consider widening the range in Config.`;
-      }
-      setConfirmation(message);
+      const overflow = isRangeOverflow(boxNumber, room.rangeStart)
+        ? `Box #${boxNumber} exceeds the ${room.name} range (${room.rangeStart}-${rangeEnd(
+            room.rangeStart
+          )}) - consider widening the range in Config.`
+        : null;
+      setConfirmation({ boxNumber, room: room.name, color: room.color, overflow });
       resetForm();
     } finally {
       setSaving(false);
@@ -167,8 +173,42 @@ export default function AddBox() {
       <h2 className='mb-2 text-xl font-semibold'>Add Box</h2>
 
       {confirmation && (
-        <div className='mb-3 rounded-lg border border-accent bg-accent/10 px-3 py-2 text-sm' role='status'>
-          {confirmation}
+        <div
+          className='fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4'
+          role='alertdialog'
+          aria-modal='true'
+          aria-labelledby='save-confirm-title'
+          onClick={() => setConfirmation(null)}>
+          <div
+            className='w-full max-w-sm rounded-2xl border border-edge bg-bg p-6 text-center shadow-2xl'
+            onClick={(e) => e.stopPropagation()}>
+            <p id='save-confirm-title' className='text-lg font-semibold text-muted'>
+              Box number
+            </p>
+            <p className='my-2 text-6xl font-extrabold tabular-nums tracking-tight'>
+              {confirmation.boxNumber}
+            </p>
+            <div
+              className='mx-auto mt-4 h-20 w-20 rounded-2xl ring-1 ring-edge'
+              style={{ background: confirmation.color }}
+              aria-hidden='true'
+            />
+            <p className='mt-3 text-sm text-muted'>
+              Label this box - match the {confirmation.room} sticker color
+            </p>
+            {confirmation.overflow && (
+              <p className='mt-3 rounded-lg bg-amber-500/15 px-3 py-2 text-sm text-amber-300'>
+                {confirmation.overflow}
+              </p>
+            )}
+            <button
+              type='button'
+              autoFocus
+              onClick={() => setConfirmation(null)}
+              className='mt-5 w-full rounded-lg bg-accent px-4 py-3 text-base font-semibold text-white'>
+              OK
+            </button>
+          </div>
         </div>
       )}
 
