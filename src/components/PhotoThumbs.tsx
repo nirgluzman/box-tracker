@@ -45,10 +45,18 @@ export function Lightbox({
   const pointers = useRef(new Map<number, { x: number; y: number }>())
   const pinchStart = useRef<{ dist: number; scale: number } | null>(null)
   const lastTap = useRef(0)
+  // Single-finger horizontal swipe to switch photos, but only while not zoomed
+  // (when zoomed, a one-finger drag pans instead). Tracks the gesture origin and
+  // accumulated dx for live drag feedback.
+  const swipe = useRef<{ startX: number; startY: number; dx: number; active: boolean } | null>(null)
 
   // Android back button closes the viewer instead of changing screens.
   useBackDismiss(true, onClose)
 
+  const pinchDist = () => {
+    const [a, b] = [...pointers.current.values()]
+    return Math.hypot(a.x - b.x, a.y - b.y)
+  }
   const apply = () => {
     const el = imgRef.current
     if (el) {
@@ -77,8 +85,10 @@ export function Lightbox({
     e.currentTarget.setPointerCapture(e.pointerId)
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
     if (pointers.current.size === 2) {
-      const [a, b] = [...pointers.current.values()]
-      pinchStart.current = { dist: Math.hypot(a.x - b.x, a.y - b.y), scale: view.current.scale }
+      pinchStart.current = { dist: pinchDist(), scale: view.current.scale }
+      swipe.current = null // a second finger cancels any swipe in progress
+    } else if (pointers.current.size === 1 && view.current.scale <= 1 && photos.length > 1) {
+      swipe.current = { startX: e.clientX, startY: e.clientY, dx: 0, active: false }
     }
   }
 
@@ -90,20 +100,40 @@ export function Lightbox({
     p.x = e.clientX
     p.y = e.clientY
     if (pointers.current.size >= 2 && pinchStart.current) {
-      const [a, b] = [...pointers.current.values()]
-      const dist = Math.hypot(a.x - b.x, a.y - b.y)
-      view.current.scale = clamp(pinchStart.current.scale * (dist / pinchStart.current.dist), 1, 5)
+      view.current.scale = clamp(pinchStart.current.scale * (pinchDist() / pinchStart.current.dist), 1, 5)
       apply()
     } else if (pointers.current.size === 1 && view.current.scale > 1) {
       view.current.tx += dx
       view.current.ty += dy
       apply()
+    } else if (swipe.current) {
+      // Not zoomed: track total movement; once it's clearly horizontal, drag the
+      // image with the finger so the swipe feels physical.
+      const s = swipe.current
+      s.dx = e.clientX - s.startX
+      const totalY = e.clientY - s.startY
+      if (!s.active && Math.abs(s.dx) > 10 && Math.abs(s.dx) > Math.abs(totalY)) s.active = true
+      if (s.active) {
+        view.current.tx = s.dx
+        apply()
+      }
     }
   }
 
   function onPointerUp(e: ReactPointerEvent<HTMLImageElement>) {
     pointers.current.delete(e.pointerId)
     if (pointers.current.size < 2) pinchStart.current = null
+    const s = swipe.current
+    swipe.current = null
+    // Commit a swipe past a quarter of the viewport width (or a clear flick);
+    // go() resets the transform. Otherwise snap the dragged image back.
+    if (s?.active && view.current.scale <= 1) {
+      const threshold = Math.min(80, window.innerWidth / 4)
+      if (Math.abs(s.dx) > threshold) {
+        go(s.dx < 0 ? 1 : -1)
+        return
+      }
+    }
     if (view.current.scale <= 1) reset() // snap back when zoomed out
   }
 
