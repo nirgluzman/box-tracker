@@ -123,6 +123,17 @@ export default function Browse() {
     if (editingId && !editingBox) setEditingId(null)
   }, [editingId, editingBox])
 
+  // Single back-dismiss entry for "a box overlay is open" (detail popup OR edit
+  // modal). Hoisted here so the mobile detail->edit transition keeps ONE stable
+  // history entry: if each modal pushed its own, closing the detail would defer a
+  // history.back() (see useBackDismiss) that pops the edit modal's freshly-pushed
+  // entry and slams it shut the instant it opens. Nested photo viewers use
+  // trapBack={false} so they don't add a second competing listener.
+  useBackDismiss(!!(detailId || editingId), () => {
+    setDetailId(null)
+    setEditingId(null)
+  })
+
   if (loading)
     return (
       <section className="p-4">
@@ -448,7 +459,8 @@ function BoxDetail({
   onClose: () => void
 }) {
   const [viewer, setViewer] = useState<number | null>(null)
-  useBackDismiss(true, onClose)
+  // Back-dismiss is owned by Browse (one entry for detail OR edit) so the
+  // detail->edit transition doesn't thrash the history stack.
 
   // Escape closes the popup, but only when the photo viewer isn't the top layer
   // (the viewer handles its own Escape - see Lightbox).
@@ -566,9 +578,8 @@ function EditForm({ box, rooms, onDone }: { box: BoxDoc; rooms: RoomDoc[]; onDon
   // Post-save confirmation modal; roomChanged drives the keep-the-number note.
   const [saved, setSaved] = useState<{ roomChanged: boolean } | null>(null)
 
-  // Edit shows as a modal overlay. Android back closes it (the nested photo
-  // viewer pushes its own entry, so back closes that first - see Lightbox).
-  useBackDismiss(true, onDone)
+  // Edit shows as a modal overlay. Back-dismiss is owned by Browse (one shared
+  // entry for the detail popup / edit modal) - see the note there.
   // Escape closes the modal, but not while a nested layer is on top: the photo
   // viewer owns its own Escape, and the post-save dialog has its own OK action.
   useEffect(() => {
@@ -801,7 +812,12 @@ function EditForm({ box, rooms, onDone }: { box: BoxDoc; rooms: RoomDoc[]; onDon
       </div>
 
       {viewer !== null && (
-        <Lightbox photos={box.photoUrls} index={viewer} onClose={() => setViewer(null)} />
+        <Lightbox
+          photos={box.photoUrls}
+          index={viewer}
+          onClose={() => setViewer(null)}
+          trapBack={false}
+        />
       )}
 
       {saved && (
