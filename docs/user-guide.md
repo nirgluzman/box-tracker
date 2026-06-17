@@ -75,7 +75,7 @@ The **Browse** screen lists every box in real time, ordered by box number. This 
 
 **Photos:** a small image icon with a number shows how many photos a box has. Tap it (or a thumbnail in the detail popup) to open the full-screen viewer - swipe sideways to move between photos, pinch to zoom.
 
-**Editing a box:** tap the **pencil** icon (on a phone, first tap the card to open the box, then Edit). You can change anything, add or remove photos, etc. Photo changes save immediately. This is also how you **add photos later** to a box you created offline.
+**Editing a box:** tap the **pencil** icon (on a phone, first tap the card to open the box, then Edit). The edit form opens as a **popup** centered on your screen - no scrolling to find the box in a long list. You can change anything, add or remove photos, etc. Photo changes save immediately. Close the popup with **Save**, **Cancel**, the **×**, Escape, or the back button (tapping outside it won't close it, so you can't lose edits by accident). This is also how you **add photos later** to a box you created offline.
 
 **Unpacking a box:** when you've opened and emptied a box, tap the **trash** icon to delete it (on a phone it's inside the box's detail popup). Deleting *is* the "unpacked" action - it removes the box and its photos. You'll be asked to confirm (unless you turned that prompt off in Config).
 

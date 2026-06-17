@@ -115,6 +115,14 @@ export default function Browse() {
     if (detailId && !detailBox) setDetailId(null)
   }, [detailId, detailBox])
 
+  // Box backing the edit modal, looked up live (same as detailBox). Edit opens as
+  // a centered overlay (below) rather than inline in the list, so it's always in
+  // view - no scrolling to the row in a long list.
+  const editingBox = editingId ? boxes.find((b) => b.id === editingId) ?? null : null
+  useEffect(() => {
+    if (editingId && !editingBox) setEditingId(null)
+  }, [editingId, editingBox])
+
   if (loading)
     return (
       <section className="p-4">
@@ -244,18 +252,14 @@ export default function Browse() {
                     <span className="text-xs text-muted">{g.boxes.length}</span>
                   </div>
                 )}
-                {g.boxes.map((box) =>
-                  editingId === box.id ? (
-                    <EditForm key={box.id} box={box} rooms={rooms} onDone={() => setEditingId(null)} />
-                  ) : (
-                    <BoxCard
-                      key={box.id}
-                      box={box}
-                      duplicate={dupKeys.has(boxKey(box))}
-                      onOpen={() => setDetailId(box.id)}
-                    />
-                  ),
-                )}
+                {g.boxes.map((box) => (
+                  <BoxCard
+                    key={box.id}
+                    box={box}
+                    duplicate={dupKeys.has(boxKey(box))}
+                    onOpen={() => setDetailId(box.id)}
+                  />
+                ))}
               </Fragment>
             ))}
           </div>
@@ -292,14 +296,7 @@ export default function Browse() {
                       </td>
                     </tr>
                   )}
-                  {g.boxes.map((box) =>
-                    editingId === box.id ? (
-                      <tr key={box.id} className="border-b border-edge">
-                        <td colSpan={8} className="p-2">
-                          <EditForm box={box} rooms={rooms} onDone={() => setEditingId(null)} />
-                        </td>
-                      </tr>
-                    ) : (
+                  {g.boxes.map((box) => (
                       <tr key={box.id} className="border-b border-edge align-top">
                         <td className="p-2 font-semibold tabular-nums">
                           <span className="inline-flex items-center gap-1">
@@ -342,8 +339,7 @@ export default function Browse() {
                           </div>
                         </td>
                       </tr>
-                    ),
-                  )}
+                  ))}
                 </Fragment>
               ))}
             </tbody>
@@ -366,6 +362,12 @@ export default function Browse() {
           onDelete={() => handleDelete(detailBox)}
           onClose={() => setDetailId(null)}
         />
+      )}
+
+      {/* Edit modal: rendered once here (not inline per row) so it opens centered
+          and in view, regardless of where the box sits in a long scrolled list. */}
+      {editingBox && (
+        <EditForm box={editingBox} rooms={rooms} onDone={() => setEditingId(null)} />
       )}
     </section>
   )
@@ -564,6 +566,19 @@ function EditForm({ box, rooms, onDone }: { box: BoxDoc; rooms: RoomDoc[]; onDon
   // Post-save confirmation modal; roomChanged drives the keep-the-number note.
   const [saved, setSaved] = useState<{ roomChanged: boolean } | null>(null)
 
+  // Edit shows as a modal overlay. Android back closes it (the nested photo
+  // viewer pushes its own entry, so back closes that first - see Lightbox).
+  useBackDismiss(true, onDone)
+  // Escape closes the modal, but not while a nested layer is on top: the photo
+  // viewer owns its own Escape, and the post-save dialog has its own OK action.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && viewer === null && !saved) onDone()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [viewer, saved, onDone])
+
   async function save() {
     setBusy(true)
     try {
@@ -612,7 +627,31 @@ function EditForm({ box, rooms, onDone }: { box: BoxDoc; rooms: RoomDoc[]; onDon
   }
 
   return (
-    <div className="flex flex-col gap-2.5 rounded-lg border border-edge bg-surface p-3">
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 sm:items-center sm:p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Edit Box #${box.boxNumber}`}
+    >
+      {/* No backdrop-click dismiss: this is a form, so a stray tap outside must
+          not discard typed edits. Close via ×, Cancel, Escape, or Android back. */}
+      <div
+        className="max-h-[90dvh] w-full overflow-y-auto rounded-t-2xl border border-edge bg-bg p-4 shadow-2xl sm:max-w-md sm:rounded-2xl"
+        style={{ borderTop: `4px solid ${box.roomColor}` }}
+      >
+        <div className="mb-3 flex items-center gap-2">
+          <span className="text-xl font-bold tabular-nums">Edit #{box.boxNumber}</span>
+          <button
+            type="button"
+            onClick={onDone}
+            className="ml-auto flex size-9 shrink-0 items-center justify-center rounded-full text-xl text-muted hover:bg-surface-2"
+            aria-label="Close"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="flex flex-col gap-2.5">
       <label className="flex items-center gap-2 text-sm">
         Box #
         {/* Read-only: this number is the physical label on the box, so it must not
@@ -757,6 +796,8 @@ function EditForm({ box, rooms, onDone }: { box: BoxDoc; rooms: RoomDoc[]; onDon
         <button type="button" className="btn" onClick={onDone} disabled={busy}>
           Cancel
         </button>
+      </div>
+        </div>
       </div>
 
       {viewer !== null && (
