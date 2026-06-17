@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import { useRooms } from '../hooks/useRooms'
 import { useBoxes } from '../hooks/useBoxes'
-import type { BoxDoc, Room, RoomDoc } from '../types'
+import type { BoxDoc, MemberDoc, Room, RoomDoc } from '../types'
 import {
   addRoom,
   deleteRoom,
@@ -29,6 +29,10 @@ import {
   seedPalette,
 } from '../data/palette'
 import { confirmAction, CONFIRM_LABELS, type ConfirmKey } from '../data/confirmPrefs'
+import { setDeletePerm, permAllowed, type DeletePerm } from '../data/members'
+import { auth } from '../firebase'
+import { useMembers } from '../hooks/useMembers'
+import { usePermissions } from '../hooks/usePermissions'
 import { useOnline } from '../hooks/useOnline'
 import { usePalette } from '../hooks/usePalette'
 import { useConfirmPrefs } from '../hooks/useConfirmPrefs'
@@ -299,6 +303,7 @@ export default function Config() {
           </div>
         </div>
       )}
+      <DeletePermissions />
       <ConfirmSettings />
 
       {/* Maintenance: rare, connection-only cleanup, kept apart from everyday actions. */}
@@ -370,6 +375,147 @@ export default function Config() {
           </div>
         )}
       </div>
+    </section>
+  )
+}
+
+// Avatar for a member row: Google photo in a circle, initial fallback (mirrors
+// the header Avatar in App.tsx but takes a MemberDoc).
+function MemberAvatar({ member }: { member: MemberDoc }) {
+  const [broken, setBroken] = useState(false)
+  const label = member.displayName ?? member.email ?? undefined
+  if (member.photoURL && !broken) {
+    return (
+      <img
+        src={member.photoURL}
+        alt=""
+        title={label}
+        referrerPolicy="no-referrer"
+        onError={() => setBroken(true)}
+        className="size-9 shrink-0 rounded-full object-cover"
+      />
+    )
+  }
+  const initial = (member.displayName ?? member.email ?? '?').charAt(0).toUpperCase()
+  return (
+    <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent text-sm font-semibold text-on-accent">
+      {initial}
+    </span>
+  )
+}
+
+// Admin-only toggle for one member's delete permission. Checked = allowed.
+function PermToggle({
+  uid,
+  field,
+  label,
+  allowed,
+}: {
+  uid: string
+  field: DeletePerm
+  label: string
+  allowed: boolean
+}) {
+  const [busy, setBusy] = useState(false)
+  return (
+    <label className="flex items-center gap-1.5 text-sm">
+      {label}
+      <input
+        type="checkbox"
+        className="size-4"
+        checked={allowed}
+        disabled={busy}
+        onChange={async (e) => {
+          setBusy(true)
+          try {
+            await setDeletePerm(uid, field, e.target.checked)
+          } finally {
+            setBusy(false)
+          }
+        }}
+      />
+    </label>
+  )
+}
+
+// Read-only allowed/blocked row, shown to non-admins for their own permissions.
+function PermRow({ label, allowed }: { label: string; allowed: boolean }) {
+  return (
+    <li className="flex items-center justify-between border-b border-edge py-2 text-sm">
+      <span>{label}</span>
+      <span className={allowed ? 'font-semibold text-emerald-400' : 'font-semibold text-danger'}>
+        {allowed ? 'Allowed' : 'Blocked'}
+      </span>
+    </li>
+  )
+}
+
+// Delete permissions (SPEC 5). The admin (token.admin claim) sees a per-member
+// toggle for box and photo deletion; everyone else sees their own permissions
+// read-only. Box deletion is also enforced in firestore.rules; photo deletion
+// is UI-only (Storage rules can't read Firestore - see SPEC 5/15).
+function DeletePermissions() {
+  const { isAdmin, canDeleteBox, canDeletePhoto } = usePermissions()
+  const { members } = useMembers()
+  const uid = auth.currentUser?.uid
+  // There can be more than one admin (any user with the `admin` claim).
+  const adminEmails = members.filter((m) => m.admin && m.email).map((m) => m.email)
+  const adminLabel = adminEmails.length > 1 ? 'Admins' : 'Admin'
+
+  return (
+    <section className="mt-6 border-t border-edge pt-4">
+      <h3 className="mb-1 font-semibold">Deletion permissions</h3>
+      <p className="mb-3 text-sm text-muted">
+        {adminLabel}
+        {adminEmails.length ? `: ${adminEmails.join(', ')}` : ''}. The admin decides who may delete
+        boxes and photos. Everyone may delete by default; editing a description is always allowed.
+      </p>
+
+      {isAdmin ? (
+        <ul className="list-none p-0">
+          {members.map((m) => (
+            <li key={m.id} className="flex items-center gap-3 border-b border-edge py-2.5">
+              <MemberAvatar member={m} />
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-semibold">{m.displayName ?? m.email}</p>
+                {m.displayName && m.email && (
+                  <p className="truncate text-xs text-muted">{m.email}</p>
+                )}
+              </div>
+              {m.id === uid || m.admin ? (
+                <span className="shrink-0 text-xs font-semibold text-accent">
+                  Admin - full access
+                </span>
+              ) : (
+                <div className="flex shrink-0 gap-4">
+                  <PermToggle
+                    uid={m.id}
+                    field="canDeleteBox"
+                    label="Boxes"
+                    allowed={permAllowed(m.canDeleteBox)}
+                  />
+                  <PermToggle
+                    uid={m.id}
+                    field="canDeletePhoto"
+                    label="Photos"
+                    allowed={permAllowed(m.canDeletePhoto)}
+                  />
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <>
+          <ul className="list-none p-0">
+            <PermRow label="Delete boxes" allowed={canDeleteBox} />
+            <PermRow label="Delete photos" allowed={canDeletePhoto} />
+          </ul>
+          <p className="mt-2 text-xs text-muted">
+            Set by the admin - you can't change these here.
+          </p>
+        </>
+      )}
     </section>
   )
 }

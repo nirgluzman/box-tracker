@@ -7,6 +7,7 @@ import {
   type User,
 } from 'firebase/auth'
 import { auth } from './firebase'
+import { registerMember } from './data/members'
 import Login from './components/Login'
 import Nav, { type Screen } from './components/Nav'
 import AddBox from './components/AddBox'
@@ -91,6 +92,11 @@ export default function App() {
         setAuthError('')
         setUser(u)
         setAuthReady(true)
+        // Record/refresh this user's profile so the admin's Config panel can
+        // list everyone with their photo (SPEC 5). Profile fields only - the
+        // permission flags are admin-only (firestore.rules). The admin marker
+        // mirrors the `admin` claim and is written only for the admin.
+        void registerMember(u, claims.admin === true)
       })
     })
   }, [])

@@ -69,6 +69,35 @@ user under **Authentication → Users** in the Firebase Console.
 
 ---
 
+## Admin role (delete permissions)
+
+The **admin** controls who can delete boxes/photos (SPEC 5.1). Admin is a second custom
+claim (`admin`), granted/removed the same way as `member`. No email is hardcoded anywhere -
+the app reads `request.auth.token.admin`. **More than one admin is allowed.**
+
+```bash
+# Make someone an admin (also ensures they are a member):
+node scripts/setMember.js <email> --admin
+
+# Remove admin only, keep their normal member access:
+node scripts/setMember.js <email> --admin --revoke
+
+# Remove all access (member + admin):
+node scripts/setMember.js <email> --revoke
+```
+
+As with `member`, the target must have signed in once, and the change takes effect on their
+next token refresh (sign out / back in). The one-time `firestore.rules` change that reads
+`token.admin` must be deployed (it ships via CI on push to `main`) before the box-delete
+gate is enforced server-side; granting/removing admin afterward needs **no redeploy**.
+
+What admin unlocks: on the Config screen the admin sees every member with "delete boxes" /
+"delete photos" toggles; everyone else sees their own permissions read-only. Default is
+"allowed" - flip a toggle off to block a specific user (e.g. a child). Box-delete blocking
+is enforced in rules; photo-delete blocking is UI-only (SPEC 5.1 / 15).
+
+---
+
 ## Troubleshooting
 
 | Symptom | Cause / fix |

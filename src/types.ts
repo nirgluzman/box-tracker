@@ -28,3 +28,24 @@ export interface Room {
 export interface RoomDoc extends Room {
   id: string
 }
+
+// members collection - SPEC 5. One doc per signed-in user (id = auth uid),
+// holding their Google profile (for the admin panel) plus admin-set delete
+// permissions. canDeleteBox/canDeletePhoto are OPTIONAL on purpose: an absent
+// flag means "allowed" (the original everyone-can-delete behavior); only an
+// explicit false blocks that user. The admin is never blocked (see members.ts).
+export interface Member {
+  email: string | null
+  displayName: string | null
+  photoURL: string | null
+  // Mirror of the `admin` custom claim, written by the admin's own client so the
+  // Config banner can show who the admin is without hardcoding an email. The
+  // real authority is the token claim (rules); this is display-only.
+  admin?: boolean
+  canDeleteBox?: boolean
+  canDeletePhoto?: boolean
+}
+
+export interface MemberDoc extends Member {
+  id: string // = auth uid
+}

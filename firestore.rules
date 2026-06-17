@@ -4,14 +4,50 @@ rules_version = '2';
 // scripts/setMember.js. Being signed in with any Google account is not enough.
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isMember() {
+      return request.auth.token.member == true;
+    }
+    // The single admin (SPEC 5) is identified by the `admin` custom claim,
+    // granted with `setMember.js <email> --admin`. No email appears in these
+    // (public) rules. The admin is the only account that may change other
+    // members' delete permissions, and is never blocked from deleting.
+    function isAdmin() {
+      return request.auth.token.admin == true;
+    }
+
+    // Box deletion can be revoked per member by the admin (SPEC 5). Absent flag
+    // = allowed; only an explicit false blocks. Admin is never blocked. Photo
+    // deletion is NOT enforced here - it lives in Storage, whose rules can't
+    // read Firestore (SPEC 5/15), so it is UI-only.
+    function canDeleteBox() {
+      let path = /databases/$(database)/documents/members/$(request.auth.uid);
+      return isAdmin() || !exists(path) || get(path).data.get('canDeleteBox', true) == true;
+    }
+
     match /boxes/{box} {
-      allow read, write: if request.auth.token.member == true;
+      allow read, create, update: if isMember();
+      allow delete: if isMember() && canDeleteBox();
     }
     match /rooms/{room} {
-      allow read, write: if request.auth.token.member == true;
+      allow read, write: if isMember();
     }
     match /settings/{doc} {
-      allow read, write: if request.auth.token.member == true;
+      allow read, write: if isMember();
+    }
+
+    // Per-user profile + admin-set delete permissions (SPEC 5). A member may
+    // write only their OWN profile and must not touch the protected keys
+    // (canDeleteBox / canDeletePhoto / admin). Only the admin sets those.
+    match /members/{uid} {
+      allow read: if isMember();
+      allow create: if isAdmin() ||
+        (isMember() && request.auth.uid == uid &&
+          !request.resource.data.keys().hasAny(['canDeleteBox', 'canDeletePhoto', 'admin']));
+      allow update: if isAdmin() ||
+        (isMember() && request.auth.uid == uid &&
+          !request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(['canDeleteBox', 'canDeletePhoto', 'admin']));
+      allow delete: if isAdmin();
     }
   }
 }

@@ -100,6 +100,18 @@ Seed rooms (optional starting set):
 - Recommended workflow: per room, only one person enters box data at a time, so two people don't compute the same number for that room. (Each room is handled by one person.)
 - Safety net: the Browse screen flags any duplicate `boxNumber` values (same number within the same room) with a warning badge, fixable via Edit.
 
+### 4.4 `members` collection
+One doc per signed-in user, id = auth uid. Drives the admin's delete-permission panel (section 5.1).
+
+| Field | Type | Notes |
+|---|---|---|
+| email | string \| null | Google email, for display in the admin panel. Self-written on sign-in. |
+| displayName | string \| null | Google display name. Self-written on sign-in. |
+| photoURL | string \| null | Google profile photo URL. Self-written on sign-in. |
+| admin | boolean (optional) | Display-only mirror of the `admin` claim; written only by the admin's own client (rules forbid anyone else). Real authority is the token claim. |
+| canDeleteBox | boolean (optional) | Admin-set. Absent = allowed; explicit `false` blocks. Enforced in rules + UI. |
+| canDeletePhoto | boolean (optional) | Admin-set. Absent = allowed; explicit `false` blocks. UI-only (Storage rules can't read Firestore). |
+
 ## 5. Authentication
 - **Google sign-in only.** No email/password, no in-app passwords. One "Sign in with Google" button (official Google logo + wordmark, per Google's branding guidelines).
 - The 4 members (Nir, Oshra, Idan, Itay) each sign in with their own Google account. On their own phone they stay signed in (auth state persists per device).
@@ -109,10 +121,20 @@ Seed rooms (optional starting set):
   - Claims are provisioned with `scripts/setMember.js`, a small Firebase Admin SDK script run once per member: `node scripts/setMember.js <email>`. It looks the user up by email and sets `{ member: true }`. The member must have signed in once first (so the Auth user record exists), then refresh their token (re-sign-in or `getIdToken(true)`) for the claim to take effect.
   - The script authenticates with a service-account JSON key referenced via `GOOGLE_APPLICATION_CREDENTIALS` (or `serviceAccountKey.json` at repo root). The key is **gitignored, never committed** (the repo is public). Generating that key and the full add/revoke runbook are in [docs/adding-a-member.md](docs/adding-a-member.md).
   - To revoke access: `node scripts/setMember.js <email> --revoke` (clears the claim via Admin SDK `setCustomUserClaims(uid, null)`), or delete the user in the Console.
-- All members have equal permissions, no roles (the `member` claim is the only claim).
+- Members are equal except for an optional **admin** role used to gate deletion (below). The two claims are `member` (required for any access) and `admin` (the deletion gatekeeper). Any number of users can hold the `admin` claim - the design is not limited to one admin.
 - Sign-out button in the app header (visible on every screen once signed in); signing out returns to the Login screen.
 - The header shows the signed-in user's Google **profile photo** in a circle (not the email). `addedBy` on each box still records the user's email for change tracking (section 4.1).
-- No password reset needed — Google handles account recovery.
+- No password reset needed - Google handles account recovery.
+
+### 5.1 Delete permissions (admin)
+Guards against a family member (e.g. a child) **accidentally** deleting boxes or photos. Editing a box description is always allowed; only deletion is gated.
+- **Admin identity = `admin` custom claim**, granted alongside `member` via `node scripts/setMember.js <email> --admin` (drop it again with `--admin --revoke`). The admin's email appears **nowhere** - not in committed source, not in the public client bundle, not in `firestore.rules`. Rules and client both read `request.auth.token.admin`. This is decoupled from deploys: granting/revoking admin is just re-running the script (no rebuild/redeploy); only the one-time rules change ships through CI.
+- **Per-user permissions** live on a `members/{uid}` doc (section 4.4): `canDeleteBox` and `canDeletePhoto`. **Absent = allowed** (preserves the original everyone-can-delete behavior); only an explicit `false` blocks that user. The admin is never blocked.
+- **Config screen (section 6.5):** the admin sees every member (profile photo + name) with two toggles (delete boxes / delete photos); their own row shows "Admin - full access". Non-admins see their own two permissions **read-only**, plus who the admin is.
+- **Enforcement is asymmetric:**
+  - *Box deletion* is enforced in **`firestore.rules`** (the rule reads the member doc) **and** in the UI - real security.
+  - *Photo deletion* is **UI-only** (button hidden when blocked). Firebase **Storage rules cannot read Firestore**, so a live admin-toggle can't be enforced there. UI-only photo protection is therefore weak (a determined user could bypass it); see section 15 for the claims/Cloud-Function migration that would make it real.
+- **Self-registration:** on each sign-in the client upserts its own `members/{uid}` profile (email, displayName, photoURL) so the admin panel can show photos. Rules forbid a member from writing the protected keys (`canDeleteBox`, `canDeletePhoto`, `admin`) on any doc; only the admin (claim) can. The admin's client also writes `admin: true` on its own doc as a display-only mirror so the Config banner can show the admin's email.
 
 ## 6. Screens
 
@@ -154,6 +176,7 @@ Browse is the single screen for both browsing while packing and finding a box wh
 - Each box has Edit and Delete actions, shown as icons (pencil / trash) for clarity. Delete doubles as "unpacked" — deleting a box that has been opened and emptied is the intended unpacking action.
 - Edit opens an inline form, prefilled with current values. The form can also add photos (rear camera or gallery) and remove existing photos on the box, which persist immediately (section 13 — the "type now, add photos later" flow).
 - Delete removes the Firestore document and all files in photoUrls from Storage, after a confirmation prompt. Removing an individual photo also prompts for confirmation.
+- Delete actions respect the admin's per-user delete permissions (section 5.1): a blocked user sees the box-delete button disabled (tooltip "Deleting is disabled by the admin") and the per-photo remove button hidden. Editing is unaffected.
 - Boxes with a duplicate `boxNumber` within the same room (see section 4.3) are flagged with a warning badge.
 - "Export CSV" button triggers CSV download of the **full dataset**, ignoring any active room/urgent filters (see section 8).
 
@@ -170,6 +193,7 @@ The Unpack screen no longer exists as a separate screen; its capabilities (searc
 - Adding a room warns if the entered range start overlaps with (a) an existing room's range (rangeStart to rangeStart + 99), or (b) box numbers already in use by any box (including boxes whose room was since deleted). This prevents a new room from reusing a freed range and colliding with orphaned boxes.
 - Edit room: change name, color, or range start. Updates the `rooms` document. Changing range start does not renumber existing boxes, only affects boxes added afterward.
 - Delete room: removes from `rooms`. Boxes already assigned to that room keep their stored room name, color, and numbers.
+- Delete permissions (section 5.1): the admin sees a per-member panel (profile photo + name, with "delete boxes" / "delete photos" toggles); their own row shows "Admin - full access". Non-admins see their own two permissions read-only plus who the admin is. The panel also surfaces the admin's email (the "admin message" on this screen).
 - Confirmation prompts: per-device toggles (one per destructive action: delete box, delete photo, delete room, delete palette color, delete orphaned photos) to enable/disable the "Are you sure?" prompt. Default all on. Stored in `localStorage`, not Firestore, so one user disabling a guard does not remove the safety net for the other 3 users. The CSV mass-deletion confirmation (section 8.2) and the Add Box unsaved-photos prompt (section 6.2) are always on and not toggleable.
 - "Download CSV" button (same as Browse export).
 - "Upload CSV" button (see section 8.2).
@@ -233,16 +257,34 @@ can be identified, return the transcript with filler removed.
 Access is gated by the `member` custom claim (section 5), not just by being signed in. Custom claims are the only mechanism readable by **both** the Firestore and Storage rule engines (Storage rules cannot read Firestore), so the same `request.auth.token.member == true` check secures both services. No email addresses appear in these (committed, public) files.
 
 ### 10.1 Firestore Rules
-Stored in `firestore.rules`, deployed via Firebase CLI (see section 12).
+Stored in `firestore.rules`, deployed via Firebase CLI (see section 12). `boxes`
+delete is gated per user by the admin (section 5.1); the `members` collection
+lets a user write only their own profile, never the protected permission keys.
 ```
+function isMember()  { return request.auth.token.member == true; }
+function isAdmin()   { return request.auth.token.admin  == true; }
+function canDeleteBox() {
+  let path = /databases/$(database)/documents/members/$(request.auth.uid);
+  // Absent flag = allowed; only an explicit false blocks. Admin is never blocked.
+  return isAdmin() || !exists(path) || get(path).data.get('canDeleteBox', true) == true;
+}
+
 match /boxes/{box} {
-  allow read, write: if request.auth.token.member == true;
+  allow read, create, update: if isMember();
+  allow delete: if isMember() && canDeleteBox();
 }
-match /rooms/{room} {
-  allow read, write: if request.auth.token.member == true;
-}
-match /settings/{doc} {
-  allow read, write: if request.auth.token.member == true;
+match /rooms/{room}   { allow read, write: if isMember(); }
+match /settings/{doc} { allow read, write: if isMember(); }
+match /members/{uid} {
+  allow read: if isMember();
+  // Self may write own profile only; admin may write anything. Protected keys:
+  // canDeleteBox / canDeletePhoto / admin.
+  allow create: if isAdmin() || (isMember() && request.auth.uid == uid &&
+    !request.resource.data.keys().hasAny(['canDeleteBox','canDeletePhoto','admin']));
+  allow update: if isAdmin() || (isMember() && request.auth.uid == uid &&
+    !request.resource.data.diff(resource.data).affectedKeys()
+      .hasAny(['canDeleteBox','canDeletePhoto','admin']));
+  allow delete: if isAdmin();
 }
 ```
 
@@ -324,6 +366,7 @@ VITE_LLM_API_KEY=
 Out of scope for the initial launch (closed 4-user audience, Android-only). Captured here so the decisions aren't lost.
 
 - **Self-service member onboarding.** Today the `member` custom claim is granted manually via `scripts/setMember.js` (section 5). If the user base grows, move provisioning to an admin UI or a Cloud Function (e.g. auto-grant for an allowed email domain on first sign-in).
+- **Real (rules-enforced) photo-delete permission.** Box deletion is enforced in `firestore.rules`, but the per-user photo-delete block (section 5.1) is **UI-only** because Firebase **Storage rules cannot read Firestore** - so a determined user could bypass it, making UI-only protection for photos effectively meaningless against anything but accidents. To make it real, mirror the permission into a **custom claim** (the only thing Storage rules can read) and gate `storage.rules` on it (`allow delete: if request.auth.token.canDeletePhoto != false`). Because claims can only be set server-side, the admin's toggle would call a small **Cloud Function** (Admin SDK `setCustomUserClaims`) instead of writing Firestore directly, and the affected user would pick up the change on next token refresh. Consider this if the audience widens beyond trusted family or if accidental-only protection proves insufficient.
 - **LLM summarization key exposure.** Provider is **Groq** (`llama-3.3-70b-versatile`), wired in `llm.ts` (passthrough fallback if no key). Groq keys cannot be HTTP-referrer-restricted, so the `VITE_LLM_API_KEY` ships in the public client bundle — accepted for the closed 4-user audience. If abuse/cost becomes a concern, move summarization behind a server-side proxy (e.g. a Cloud Function) so the key never ships to the client (section 7 / 10.3).
 - **iOS support.** Android-only at launch because iOS Safari lacks Web Speech API (section 2). A text-only fallback (no mic) could open the app to iOS.
 - **Bundle size.** The Firebase SDK produces a single large chunk (~600 KB). Consider route-level code-splitting / dynamic imports if load time becomes an issue.

@@ -3,6 +3,7 @@ import { useBoxes } from '../hooks/useBoxes'
 import { useRooms } from '../hooks/useRooms'
 import { useOnline } from '../hooks/useOnline'
 import { useIsTouch } from '../hooks/useIsTouch'
+import { usePermissions } from '../hooks/usePermissions'
 import { addBoxPhoto, boxKey, deleteBox, duplicateKeys, removeBoxPhoto, updateBox } from '../data/boxes'
 import { downloadBoxesCsv } from '../data/csv'
 import { confirmAction } from '../data/confirmPrefs'
@@ -41,6 +42,7 @@ function matchesContent(description: string, query: string): boolean {
 export default function Browse() {
   const { boxes, loading } = useBoxes()
   const { rooms } = useRooms()
+  const { canDeleteBox } = usePermissions()
 
   const [roomSel, setRoomSel] = useState<string[]>([]) // empty = all rooms
   const [urgentOnly, setUrgentOnly] = useState(false)
@@ -91,6 +93,9 @@ export default function Browse() {
   }, [groupByRoom, filtered, rooms])
 
   async function handleDelete(box: BoxDoc) {
+    // Defensive: the button is disabled when blocked, and firestore.rules also
+    // reject the delete, but never act on a forbidden delete from the UI.
+    if (!canDeleteBox) return
     if (!confirmAction('deleteBox', `Delete Box #${box.boxNumber} (${box.room})? This also removes its photos.`))
       return
     setDeletingId(box.id)
@@ -239,6 +244,7 @@ export default function Browse() {
                       box={box}
                       duplicate={dupKeys.has(boxKey(box))}
                       deleting={deletingId === box.id}
+                      canDelete={canDeleteBox}
                       onEdit={() => setEditingId(box.id)}
                       onDelete={() => handleDelete(box)}
                     />
@@ -319,9 +325,9 @@ export default function Browse() {
                               type="button"
                               className="btn px-3"
                               onClick={() => handleDelete(box)}
-                              disabled={deletingId === box.id}
+                              disabled={deletingId === box.id || !canDeleteBox}
                               aria-label="Delete"
-                              title="Delete"
+                              title={canDeleteBox ? 'Delete' : 'Deleting is disabled by the admin'}
                             >
                               {deletingId === box.id ? <Spinner /> : <TrashIcon />}
                             </button>
@@ -355,12 +361,14 @@ function BoxCard({
   box,
   duplicate,
   deleting,
+  canDelete,
   onEdit,
   onDelete,
 }: {
   box: BoxDoc
   duplicate: boolean
   deleting: boolean
+  canDelete: boolean
   onEdit: () => void
   onDelete: () => void
 }) {
@@ -397,9 +405,9 @@ function BoxCard({
           type="button"
           className="btn px-3"
           onClick={onDelete}
-          disabled={deleting}
+          disabled={deleting || !canDelete}
           aria-label="Delete"
-          title="Delete"
+          title={canDelete ? 'Delete' : 'Deleting is disabled by the admin'}
         >
           {deleting ? <Spinner /> : <TrashIcon />}
         </button>
@@ -416,6 +424,7 @@ function EditForm({ box, rooms, onDone }: { box: BoxDoc; rooms: RoomDoc[]; onDon
   const [busy, setBusy] = useState(false)
   const online = useOnline()
   const isTouch = useIsTouch()
+  const { canDeletePhoto } = usePermissions()
   const [uploading, setUploading] = useState(false)
   const [removingUrl, setRemovingUrl] = useState<string | null>(null)
   const [viewer, setViewer] = useState<number | null>(null)
@@ -457,6 +466,9 @@ function EditForm({ box, rooms, onDone }: { box: BoxDoc; rooms: RoomDoc[]; onDon
   }
 
   async function removePhoto(url: string) {
+    // UI-only gate (Storage rules can't read Firestore - SPEC 5/15). The remove
+    // button is hidden when blocked; this guards the path defensively.
+    if (!canDeletePhoto) return
     if (!confirmAction('deletePhoto', 'Delete this photo?')) return
     setRemovingUrl(url)
     try {
@@ -539,14 +551,17 @@ function EditForm({ box, rooms, onDone }: { box: BoxDoc; rooms: RoomDoc[]; onDon
                     <Spinner />
                   </div>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => removePhoto(url)}
-                    className="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-danger text-xs text-white"
-                    aria-label="Remove photo"
-                  >
-                    ×
-                  </button>
+                  // Hidden when the admin has blocked photo deletion for this user.
+                  canDeletePhoto && (
+                    <button
+                      type="button"
+                      onClick={() => removePhoto(url)}
+                      className="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-danger text-xs text-white"
+                      aria-label="Remove photo"
+                    >
+                      ×
+                    </button>
+                  )
                 )}
               </div>
             ))}
