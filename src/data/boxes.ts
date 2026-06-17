@@ -24,9 +24,21 @@ export function newBoxId(): string {
 // Box number = max existing number in that room + 1, else the room's rangeStart
 // (SPEC 4.3). `boxes` should come from the local-cache snapshot so it includes
 // pending unsynced boxes and works offline.
+//
+// Two guards for mixed/moved boxes: (1) only numbers inside this room's own range
+// count toward max+1, so a box moved in from another room (which keeps its original
+// out-of-range number) never inflates this room's numbering; (2) the result is
+// bumped past any number currently held by any box anywhere, so a moved box reserves
+// its number globally and the same number is never allocated again in any room.
 export function nextBoxNumber(roomName: string, rangeStart: number, boxes: BoxDoc[]): number {
-  const nums = boxes.filter((b) => b.room === roomName).map((b) => b.boxNumber)
-  return nums.length ? Math.max(...nums) + 1 : rangeStart
+  const end = rangeEnd(rangeStart)
+  const inRange = boxes
+    .filter((b) => b.room === roomName && b.boxNumber >= rangeStart && b.boxNumber <= end)
+    .map((b) => b.boxNumber)
+  const used = new Set(boxes.map((b) => b.boxNumber))
+  let n = inRange.length ? Math.max(...inRange) + 1 : rangeStart
+  while (used.has(n)) n++
+  return n
 }
 
 // True when the assigned number spills past the room's range (SPEC 4.3).

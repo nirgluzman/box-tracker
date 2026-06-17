@@ -409,7 +409,6 @@ function BoxCard({
 }
 
 function EditForm({ box, rooms, onDone }: { box: BoxDoc; rooms: RoomDoc[]; onDone: () => void }) {
-  const [boxNumber, setBoxNumber] = useState(box.boxNumber)
   const [packingNumber, setPackingNumber] = useState(box.packingNumber ?? '')
   const [roomName, setRoomName] = useState(box.room)
   const [description, setDescription] = useState(box.description)
@@ -420,6 +419,8 @@ function EditForm({ box, rooms, onDone }: { box: BoxDoc; rooms: RoomDoc[]; onDon
   const [uploading, setUploading] = useState(false)
   const [removingUrl, setRemovingUrl] = useState<string | null>(null)
   const [viewer, setViewer] = useState<number | null>(null)
+  // Post-save confirmation modal; roomChanged drives the keep-the-number note.
+  const [saved, setSaved] = useState<{ roomChanged: boolean } | null>(null)
 
   async function save() {
     setBusy(true)
@@ -427,14 +428,15 @@ function EditForm({ box, rooms, onDone }: { box: BoxDoc; rooms: RoomDoc[]; onDon
       // roomColor follows the picked room; keep existing color if the room was deleted.
       const roomColor = rooms.find((r) => r.name === roomName)?.color ?? box.roomColor
       await updateBox(box.id, {
-        boxNumber,
+        // boxNumber is intentionally not editable: it is the physical label written
+        // on the box. Changing the room keeps the original number (SPEC 4.3).
         packingNumber: packingNumber.trim(),
         room: roomName,
         roomColor,
         description,
         urgent,
       })
-      onDone()
+      setSaved({ roomChanged: roomName !== box.room })
     } finally {
       setBusy(false)
     }
@@ -468,11 +470,15 @@ function EditForm({ box, rooms, onDone }: { box: BoxDoc; rooms: RoomDoc[]; onDon
     <div className="flex flex-col gap-2.5 rounded-lg border border-edge bg-surface p-3">
       <label className="flex items-center gap-2 text-sm">
         Box #
+        {/* Read-only: this number is the physical label on the box, so it must not
+            change on edit (incl. when the room changes). Packing # below is editable. */}
         <input
           type="number"
-          className="field w-28"
-          value={boxNumber}
-          onChange={(e) => setBoxNumber(Number(e.target.value))}
+          className="field w-28 cursor-not-allowed bg-surface-2 text-muted"
+          value={box.boxNumber}
+          readOnly
+          disabled
+          title="Box number is the physical label and can't be changed"
         />
       </label>
       <label className="flex items-center gap-2 text-sm">
@@ -607,6 +613,39 @@ function EditForm({ box, rooms, onDone }: { box: BoxDoc; rooms: RoomDoc[]; onDon
 
       {viewer !== null && (
         <Lightbox photos={box.photoUrls} index={viewer} onClose={() => setViewer(null)} />
+      )}
+
+      {saved && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="edit-saved-title"
+          onClick={onDone}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl border border-edge bg-bg p-6 text-center shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p id="edit-saved-title" className="text-lg font-semibold">
+              Changes saved
+            </p>
+            {saved.roomChanged && (
+              <p className="mt-3 rounded-lg bg-amber-500/15 px-3 py-2 text-sm text-amber-300">
+                Keep Box #{box.boxNumber} written on the box - the number is already allocated and
+                doesn't change with the room.
+              </p>
+            )}
+            <button
+              type="button"
+              autoFocus
+              onClick={onDone}
+              className="mt-5 w-full rounded-lg bg-accent px-4 py-3 text-base font-semibold text-white"
+            >
+              OK
+            </button>
+          </div>
+        </div>
       )}
     </div>
   )
