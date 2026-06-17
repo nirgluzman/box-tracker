@@ -8,7 +8,7 @@ import { addBoxPhoto, boxKey, deleteBox, duplicateKeys, removeBoxPhoto, updateBo
 import { downloadBoxesCsv } from '../data/csv'
 import { confirmAction } from '../data/confirmPrefs'
 import { Spinner } from './Spinner'
-import { Lightbox, PhotoThumbs } from './PhotoThumbs'
+import { Lightbox, PhotoBadge } from './PhotoThumbs'
 import { PencilIcon, TrashIcon } from './icons'
 import type { BoxDoc, RoomDoc } from '../types'
 
@@ -220,8 +220,8 @@ export default function Browse() {
         <p className="text-muted">No boxes match.</p>
       ) : (
         <>
-          {/* Mobile: cards */}
-          <div className="flex flex-col gap-3 md:hidden">
+          {/* Mobile: compact scan rows */}
+          <div className="flex flex-col gap-2 md:hidden">
             {groups.map((g) => (
               <Fragment key={g.room ?? 'all'}>
                 {g.room && (
@@ -262,6 +262,7 @@ export default function Browse() {
                 <th className="p-2">Packing #</th>
                 <th className="p-2">Room</th>
                 <th className="p-2">Description</th>
+                <th className="p-2">Photos</th>
                 <th className="p-2">Urgent</th>
                 <th className="p-2">Added By</th>
                 <th className="p-2">Actions</th>
@@ -272,7 +273,7 @@ export default function Browse() {
                 <Fragment key={g.room ?? 'all'}>
                   {g.room && (
                     <tr className="bg-surface-2">
-                      <td colSpan={7} className="p-2 font-semibold">
+                      <td colSpan={8} className="p-2 font-semibold">
                         <span className="inline-flex items-center gap-2">
                           <span
                             className="size-3 rounded-full"
@@ -288,7 +289,7 @@ export default function Browse() {
                   {g.boxes.map((box) =>
                     editingId === box.id ? (
                       <tr key={box.id} className="border-b border-edge">
-                        <td colSpan={7} className="p-2">
+                        <td colSpan={8} className="p-2">
                           <EditForm box={box} rooms={rooms} onDone={() => setEditingId(null)} />
                         </td>
                       </tr>
@@ -308,6 +309,7 @@ export default function Browse() {
                         <td className="p-2 tabular-nums text-muted">{box.packingNumber || ''}</td>
                         <td className="p-2">{box.room}</td>
                         <td className="p-2">{box.description}</td>
+                        <td className="p-2"><PhotoBadge urls={box.photoUrls} /></td>
                         <td className="p-2">{box.urgent ? 'Yes' : ''}</td>
                         <td className="p-2 text-muted">{box.addedBy}</td>
                         <td className="p-2">
@@ -372,38 +374,42 @@ function BoxCard({
   onEdit: () => void
   onDelete: () => void
 }) {
+  // Compact scan row (SPEC 6.3): the number + a clamped description carry the
+  // glance; photos collapse to an icon+count that opens the swipeable viewer;
+  // the full detail/edit view lives behind the pencil. Tuned for 200+ boxes.
   return (
     <div
-      className="rounded-lg border border-edge bg-surface p-3"
+      className="flex items-start gap-2 rounded-lg border border-edge bg-surface py-2 pl-2 pr-1.5"
       style={{ borderLeft: `4px solid ${box.roomColor}` }}
     >
-      <div className="mb-1 flex flex-wrap items-center gap-2">
-        <span className="text-lg font-bold tabular-nums">#{box.boxNumber}</span>
-        <span className="text-sm text-muted">{box.room}</span>
-        {box.packingNumber && (
-          <span className="rounded bg-surface-2 px-1.5 py-0.5 text-xs text-muted">
-            Pkg #{box.packingNumber}
-          </span>
-        )}
-        {box.urgent && (
-          <span className="rounded bg-danger/20 px-1.5 py-0.5 text-xs text-danger">Urgent</span>
-        )}
-        {duplicate && <DuplicateBadge />}
-      </div>
-      {box.description && <p className="mb-2 text-sm">{box.description}</p>}
-      {box.photoUrls.length > 0 && (
-        <div className="mb-2">
-          <PhotoThumbs urls={box.photoUrls} />
+      <span className="mt-px shrink-0 text-base font-bold tabular-nums">#{box.boxNumber}</span>
+      <div className="min-w-0 flex-1">
+        <p className="line-clamp-2 text-sm leading-snug">
+          {box.description || <span className="text-muted">(no description)</span>}
+        </p>
+        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted">
+          <span>{box.room}</span>
+          {box.packingNumber && <span>Pkg #{box.packingNumber}</span>}
+          {box.urgent && (
+            <span className="rounded bg-danger/20 px-1.5 font-medium text-danger">Urgent</span>
+          )}
+          {duplicate && <DuplicateBadge />}
         </div>
-      )}
-      <p className="mb-2 text-xs text-muted">Added by {box.addedBy}</p>
-      <div className="flex gap-2">
-        <button type="button" className="btn px-3" onClick={onEdit} aria-label="Edit" title="Edit">
+      </div>
+      <div className="flex shrink-0 items-center gap-0.5">
+        <PhotoBadge urls={box.photoUrls} />
+        <button
+          type="button"
+          className="rounded p-2 hover:bg-surface-2"
+          onClick={onEdit}
+          aria-label="Edit"
+          title="Edit"
+        >
           <PencilIcon />
         </button>
         <button
           type="button"
-          className="btn px-3"
+          className="rounded p-2 text-muted hover:bg-surface-2 disabled:opacity-40"
           onClick={onDelete}
           disabled={deleting || !canDelete}
           aria-label="Delete"

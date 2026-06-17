@@ -1,28 +1,26 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { useBackDismiss } from '../hooks/useBackDismiss'
+import { ImageIcon } from './icons'
 
-// Clickable photo thumbnails that open a full-screen, pinch-to-zoom viewer.
-export function PhotoThumbs({ urls, size = 'size-16' }: { urls: string[]; size?: string }) {
-  const [open, setOpen] = useState<number | null>(null)
+// Compact photo affordance for dense lists: a single image icon with a count
+// badge. Tapping opens the swipeable full-screen viewer. Renders nothing when
+// the box has no photos, so the row stays tight.
+export function PhotoBadge({ urls }: { urls: string[] }) {
+  const [open, setOpen] = useState(false)
   if (urls.length === 0) return null
   return (
     <>
-      <div className="flex flex-wrap gap-2">
-        {urls.map((u, idx) => (
-          <button
-            key={u}
-            type="button"
-            onClick={() => setOpen(idx)}
-            className="rounded focus-visible:outline-2 focus-visible:outline-accent"
-            aria-label="View photo full screen"
-          >
-            <img src={u} alt="" className={`${size} rounded border border-edge object-cover`} />
-          </button>
-        ))}
-      </div>
-      {open !== null && (
-        <Lightbox photos={urls} index={open} onClose={() => setOpen(null)} />
-      )}
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-muted hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-accent"
+        aria-label={`View ${urls.length} photo${urls.length > 1 ? 's' : ''}`}
+        title={`${urls.length} photo${urls.length > 1 ? 's' : ''}`}
+      >
+        <ImageIcon />
+        <span className="text-xs tabular-nums">{urls.length}</span>
+      </button>
+      {open && <Lightbox photos={urls} index={0} onClose={() => setOpen(false)} />}
     </>
   )
 }
